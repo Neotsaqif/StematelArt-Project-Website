@@ -1,1 +1,2 @@
 # StematelArt-Project-Website
+StematelArt is an art community platform where members can share, discover, and interact with artworks. The platform provides features such as artwork posting, user accounts, discovery, rankings, contests, saved and liked artworks, notifications, and an admin panel for managing the platform. It is designed to provide a dedicated space for the StematelArt community to showcase their work and connect with other artists and users.
