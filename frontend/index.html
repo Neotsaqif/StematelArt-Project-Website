@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ARTVAULT - Komunitas & Galeri Seni Digital Indonesia</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@0.446.0/dist/umd/lucide.js"></script>
+
+  <!-- React UMD & Babel Standalone -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      background: #ffffff;
+      color: #0A0A0B;
+      font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a {
+      color: #C41A22;
+      text-decoration: none;
+    }
+    a:hover {
+      color: #E81E28;
+    }
+    @keyframes avShimmer {
+      from { background-position: 200% 0; }
+      to { background-position: -20% 0; }
+    }
+    :focus-visible {
+      outline: 2px solid #E81E28;
+      outline-offset: 2px;
+    }
+    button:disabled {
+      cursor: not-allowed;
+    }
+    input[type="range"] {
+      accent-color: #E81E28;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="./src/App.jsx"></script>
+  <script type="text/babel">
+    const rootElement = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(<window.ArtvaultApp />);
+  </script>
+</body>
+</html>
