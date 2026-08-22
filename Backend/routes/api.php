@@ -1,10 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 
-Route::get('/health', function () {
-    return response()->json([
-        'success' => true,
-        'message' => 'StematelArt API is running',
-    ]);
-});
+Route::post('/register', [AuthController::class, 'register']);
