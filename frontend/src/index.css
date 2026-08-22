@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: #ffffff;
+    color: #0A0A0B;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: #C41A22;
+    text-decoration: none;
+  }
+  a:hover {
+    color: #E81E28;
+  }
+  :focus-visible {
+    outline: 2px solid #E81E28;
+    outline-offset: 2px;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  input[type="range"] {
+    accent-color: #E81E28;
+  }
+}
+
+@keyframes avShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -20% 0; }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Export Frame styles */
+.av-frame aside {
+  height: 100% !important;
+}
+.av-frame .av-mobilenav,
+.av-frame .md\:hidden {
+  display: none !important;
+}
