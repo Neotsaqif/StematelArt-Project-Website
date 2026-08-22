@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="./support.js"></script>
+</head>
+
+<body>
+  <x-dc>
+    <helmet>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+      <script src="https://cdn.tailwindcss.com"></script>
+      <script src="https://unpkg.com/lucide@0.446.0/dist/umd/lucide.js"></script>
+      <style>
+        html,
+        body {
+          height: 100%;
+          margin: 0;
+        }
+
+        body {
+          background: #ffffff;
+          color: #0A0A0B;
+          font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+          -webkit-font-smoothing: antialiased;
+        }
+
+        a {
+          color: #C41A22;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: #E81E28;
+        }
+
+        @keyframes avShimmer {
+          from {
+            background-position: 200% 0;
+          }
+
+          to {
+            background-position: -20% 0;
+          }
+        }
+
+        :focus-visible {
+          outline: 2px solid #E81E28;
+          outline-offset: 2px;
+        }
+
+        button:disabled {
+          cursor: not-allowed;
+        }
+
+        input[type="range"] {
+          accent-color: #E81E28;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      </style>
+      <template id="__bundler_thumbnail">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+          <rect width="200" height="200" fill="#E81E28"></rect>
+          <rect x="60" y="60" width="80" height="80" rx="14" fill="#ffffff"></rect>
+          <text x="100" y="114" text-anchor="middle" font-family="'Plus Jakarta Sans',system-ui,sans-serif"
+            font-size="40" font-weight="800" fill="#E81E28">AV</text>
+        </svg>
+      </template>
+    </helmet>
+    <x-import component-from-global-scope="ArtvaultApp" from="./Artvault.jsx" hint-size="100%,100vh"></x-import>
+  </x-dc>
+</body>
+
+</html>
