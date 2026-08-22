@@ -1,0 +1,10 @@
+# Dependencies & Build Outputs
+frontend/node_modules/
+frontend/dist/
+Backend/vendor/
+Backend/.env
+Backend/database/database.sqlite
+
+# Environment & OS
+.DS_Store
+Thumbs.db
