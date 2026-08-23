@@ -1426,3 +1426,816 @@ Laravel 12
 Fondasi ini siap untuk dikembangkan ke tahap autentikasi lengkap (login, logout), role-based authorization, dan fitur-fitur inti (artwork, like, comment, commission, contest, notification, admin management).
 
 Penting dicatat bahwa **sistem authentication belum lengkap**. Login, logout, middleware `auth:sanctum`, dan authorization berbasis role **belum diimplementasikan**. Dokumentasi ini dibuat berdasarkan source code aktual di repository pada branch `dev`, bukan berdasarkan asumsi atau template.
+
+
+
+
+
+# Troubleshooting: `could not find driver` pada Laravel + Supabase PostgreSQL
+
+Dokumentasi ini dibuat untuk membantu developer StematelART mengatasi error:
+
+`Illuminate\Database\QueryException: could not find driver`
+
+yang terjadi ketika Laravel mencoba melakukan koneksi ke database PostgreSQL milik Supabase.
+
+---
+
+## 1. Deskripsi Masalah
+
+Saat menjalankan Laravel dan mengakses aplikasi, Laravel dapat menampilkan error seperti berikut:
+
+```text
+Illuminate\Database\QueryException
+
+could not find driver
+
+(Connection: pgsql, Host: aws-0-ap-northeast-2.pooler.supabase.com,
+Port: 5432, Database: postgres)
+
+Contoh
+
+Illuminate\Database\QueryException
+
+could not find driver
+(Connection: pgsql, Host: aws-0-ap-northeast-2.pooler.supabase.com,
+Port: 5432, Database: postgres,
+SQL: select * from "sessions" where "id" = ...)
+
+Error tersebut biasanya muncul ketika Laravel menggunakan database PostgreSQL/Supabase, tetapi PHP yang sedang digunakan untuk menjalankan Laravel belum mengaktifkan PostgreSQL driver.
+
+Dengan kata lain:
+
+Laravel
+   ↓
+Database Configuration
+   ↓
+PostgreSQL / Supabase
+   ↓
+PHP membutuhkan PostgreSQL Driver
+   ↓
+Driver tidak tersedia
+   ↓
+"could not find driver"
+
+Masalah ini bukan berarti database Supabase rusak.
+Masalah utamanya adalah PHP yang digunakan oleh Laravel tidak memiliki atau tidak mengaktifkan extension PostgreSQL yang dibutuhkan.
+
+
+
+2. Penyebab Utama
+Laravel menggunakan konfigurasi:
+DB_CONNECTION=pgsql
+
+DB_CONNECTION=pgsql
+Artinya Laravel membutuhkan driver PostgreSQL.
+PHP membutuhkan dua extension utama:
+pdo_pgsq
+pgsql
+
+Contohnya, jika menjalankan:
+php -m | findstr /I "pgsql pdo"
+dan hasilnya hanya:
+PDO
+pdo_mysql
+pdo_sqlite
+
+maka PostgreSQL driver belum aktif.
+Sedangkan hasil yang benar harus mengandung:
+PDO
+pdo_mysql
+pdo_pgsql
+pdo_sqlite
+pgsql
+Perbedaan tersebut penting karena Laravel menggunakan PostgreSQL melalui PDO.
+
+
+
+3. Jangan Langsung Mengubah Konfigurasi Supabase
+Jika mendapatkan error:
+could not find driver
+jangan langsung mengubah:
+
+Host Supabase
+Port Supabase
+Username database
+Password database
+Database name
+Migration
+Model Laravel
+Controller
+
+Periksa terlebih dahulu environment PHP.
+Urutan pengecekan yang direkomendasikan:
+1. Periksa versi PHP
+2. Periksa PHP yang digunakan
+3. Periksa php.ini
+4. Periksa extension PostgreSQL
+5. Aktifkan PostgreSQL driver
+6. Restart terminal
+7. Clear cache Laravel
+8. Test koneksi database
+
+
+
+4. Periksa Versi PHP
+Buka terminal pada folder:
+Backend
+Kemudian jalankan:
+php -v
+Contoh:
+PHP 8.2.12 (cli) (built: Oct 24 2023 21:15:15)
+atau:
+PHP 8.5.9 (cli) (built: Jul 28 2026 13:21:24)
+Yang paling penting bukan hanya versi PHP.
+Kita juga harus mengetahui PHP mana yang digunakan.
+
+
+
+
+5. Periksa Lokasi PHP yang Digunakan
+
+Jalankan:
+
+where.exe php
+
+Contoh jika menggunakan XAMPP:
+D:\xampp\php\php.exe
+
+Contoh jika menggunakan Laragon:
+D:\laragon\bin\php\php-8.5.9-Win32-vs17-x64\php.exe
+
+Ini sangat penting.
+Pada Windows dapat terdapat beberapa instalasi PHP sekaligus.
+
+Contohnya:
+XAMPP
+D:\xampp\php\php.exe
+Laragon
+D:\laragon\bin\php\php-8.5.9-Win32-vs17-x64\php.exe
+
+Laravel akan menggunakan PHP yang ditemukan oleh terminal melalui PATH.
+Jadi jangan berasumsi bahwa PHP yang aktif adalah PHP dari XAMPP atau Laragon hanya karena salah satunya sudah terinstall.
+Gunakan:
+where.exe php
+untuk memastikan.
+
+
+
+
+6. Periksa php.ini yang Digunakan
+
+Setelah mengetahui PHP yang digunakan, jalankan:
+
+php --ini
+
+Contoh:
+
+Configuration File (php.ini) Path:
+""
+
+Loaded Configuration File:
+"D:\xampp\php\php.ini"
+
+Atau pada Laragon:
+
+Loaded Configuration File:
+"D:\laragon\bin\php\php-8.5.9-Win32-vs17-x64\php.ini"
+
+Perhatikan bagian:
+
+Loaded Configuration File
+
+File tersebut adalah php.ini yang sedang digunakan oleh PHP.
+
+
+
+
+7. Periksa PostgreSQL Driver
+
+Jalankan:
+
+php -m | findstr /I "pgsql pdo"
+Jika hasilnya seperti ini:
+PDO
+pdo_mysql
+pdo_sqlite
+
+berarti PostgreSQL driver belum aktif.
+
+Laravel akan mengalami:
+
+could not find driver
+Jika hasilnya seperti ini:
+PDO
+pdo_mysql
+pdo_pgsql
+pdo_sqlite
+pgsql
+
+berarti PostgreSQL driver sudah aktif.
+
+
+
+
+8. Mengaktifkan PostgreSQL Driver pada PHP
+
+Jika pdo_pgsql dan pgsql belum muncul, kita perlu mengaktifkannya melalui php.ini.
+
+Pertama, jalankan:
+
+php --ini
+
+Contoh:
+
+Loaded Configuration File:
+"D:\xampp\php\php.ini"
+
+Buka file:
+
+D:\xampp\php\php.ini
+
+Jika menggunakan Laragon, buka php.ini yang ditunjukkan oleh:
+
+php --ini
+
+Jangan membuka php.ini secara acak.
+
+
+
+
+9. Cari Konfigurasi PostgreSQL
+
+Di dalam php.ini, cari:
+
+;extension=pdo_pgsql
+
+dan:
+
+;extension=pgsql
+
+Tanda:
+
+;
+
+berarti extension tersebut masih dinonaktifkan.
+
+Ubah menjadi:
+
+extension=pdo_pgsql
+extension=pgsql
+
+Simpan file php.ini.
+
+
+
+
+10. Restart Terminal
+
+Setelah mengubah php.ini, tutup terminal yang sedang digunakan.
+
+Kemudian buka terminal baru.
+
+Hal ini penting karena terminal/PHP yang sedang berjalan dapat masih menggunakan konfigurasi sebelumnya.
+
+Kemudian jalankan kembali:
+
+php -m | findstr /I "pgsql pdo"
+
+Hasil yang diharapkan:
+
+PDO
+pdo_mysql
+pdo_pgsql
+pdo_sqlite
+pgsql
+
+Jika pdo_pgsql dan pgsql sudah muncul, driver PostgreSQL sudah aktif.
+
+
+
+
+11. Jika Menggunakan XAMPP
+
+Jika hasil:
+
+where.exe php
+
+menunjukkan:
+
+D:\xampp\php\php.exe
+
+berarti PHP yang digunakan adalah PHP dari XAMPP.
+
+Maka php.ini yang harus diperiksa adalah file milik XAMPP.
+
+Contoh:
+
+D:\xampp\php\php.ini
+
+Pastikan:
+
+extension=pdo_pgsql
+extension=pgsql
+
+sudah aktif.
+
+Kemudian buka terminal baru dan jalankan:
+
+php -m | findstr /I "pgsql pdo"
+
+
+
+
+12. Jika Menggunakan Laragon
+
+Jika:
+
+where.exe php
+
+menghasilkan:
+
+D:\laragon\bin\php\php-8.5.9-Win32-vs17-x64\php.exe
+
+berarti PHP yang digunakan berasal dari Laragon.
+
+Periksa:
+
+php --ini
+
+Kemudian buka php.ini yang ditampilkan oleh perintah tersebut.
+
+Pastikan:
+
+extension=pdo_pgsql
+extension=pgsql
+
+aktif.
+
+Kemudian restart terminal dan periksa kembali:
+
+php -m | findstr /I "pgsql pdo"
+
+
+
+
+13. Jangan Mencampur PHP XAMPP dan Laragon
+
+Salah satu sumber masalah yang sering terjadi adalah developer memiliki beberapa PHP sekaligus.
+
+Contoh:
+
+XAMPP
+D:\xampp\php\php.exe
+
+Laragon
+D:\laragon\bin\php\php-8.5.9-Win32-vs17-x64\php.exe
+
+Tetapi:
+
+where.exe php
+
+menunjukkan:
+
+D:\xampp\php\php.exe
+
+Sementara developer mengedit:
+
+D:\laragon\bin\php\...\php.ini
+
+Akibatnya perubahan tidak berpengaruh.
+
+PHP yang digunakan Laravel tetap menggunakan php.ini milik XAMPP.
+
+Karena itu selalu gunakan:
+
+where.exe php
+
+dan:
+
+php --ini
+
+untuk memastikan environment yang digunakan.
+
+
+
+
+14. Clear Cache Laravel
+
+Setelah PostgreSQL driver berhasil aktif, masuk ke folder backend:
+
+cd Backend
+
+Kemudian jalankan:
+
+php artisan optimize:clear
+
+Contoh hasil yang benar:
+
+INFO  Clearing cached bootstrap files.
+
+config ................................................ DONE
+cache ................................................. DONE
+compiled .............................................. DONE
+events ................................................ DONE
+routes ................................................ DONE
+views ................................................. DONE
+
+Jika perintah tersebut berhasil, Laravel sudah membersihkan konfigurasi/cache yang sebelumnya mungkin masih menggunakan konfigurasi lama.
+
+
+
+
+5. Test Migration
+
+Setelah itu jalankan:
+
+php artisan migrate:status
+
+Jika koneksi berhasil, Laravel akan dapat membaca migration dari database PostgreSQL.
+
+Contoh:
+
+Migration name
+0001_01_01_000000_create_users_table ........ Ran
+0001_01_01_000001_create_cache_table ......... Ran
+0001_01_01_000002_create_jobs_table .......... Ran
+
+Jika migration dapat dibaca dari database Supabase, berarti koneksi PostgreSQL sudah bekerja.
+
+
+
+
+16. Test Koneksi Database Menggunakan Tinker
+
+Untuk memastikan koneksi Laravel ke Supabase benar-benar berhasil, jalankan:
+
+php artisan tinker
+
+Kemudian:
+
+DB::connection()->getPdo();
+
+Jika berhasil, akan muncul informasi seperti:
+
+Pdo\Pgsql
+
+dan:
+
+DRIVER_NAME: "pgsql"
+
+serta:
+
+CONNECTION_STATUS: "Connection OK; waiting to send."
+
+Contoh:
+
+Pdo\Pgsql {
+    attributes: {
+        DRIVER_NAME: "pgsql",
+        CONNECTION_STATUS: "Connection OK; waiting to send."
+    }
+}
+
+Jika mendapatkan:
+
+Connection OK
+
+maka PHP sudah berhasil menggunakan PostgreSQL driver dan Laravel berhasil terhubung ke Supabase.
+
+Keluar dari Tinker dengan:
+
+exit
+
+
+
+
+17. Test Laravel Server
+
+Jalankan:
+
+php artisan serve
+
+Jika berhasil:
+
+INFO  Server running on [http://127.0.0.1:8000].
+
+Buka:
+
+http://127.0.0.1:8000
+
+Jika halaman Laravel muncul tanpa:
+
+could not find driver
+
+maka konfigurasi dasar Laravel dan database sudah berjalan.
+
+
+
+
+18. Test API StematelART
+
+Untuk backend StematelART, API registration dapat diuji melalui endpoint:
+
+POST http://127.0.0.1:8000/api/register
+
+Contoh JSON:
+
+{
+    "name": "Kiandra",
+    "email": "kiandra123@example.com",
+    "password": "password123",
+    "password_confirmation": "password123"
+}
+
+Jika berhasil, API akan memberikan response HTTP:
+
+201 Created
+
+dan response JSON kurang lebih:
+
+{
+    "success": true,
+    "message": "Registration successful",
+    "data": {
+        "user": {
+            "name": "Kiandra",
+            "email": "kiandra123@example.com",
+            "role": "user"
+        },
+        "token": "..."
+    }
+}
+
+Token yang diberikan merupakan token autentikasi Sanctum.
+
+
+
+
+19. Troubleshooting Jika Masih Error
+A. pdo_pgsql tidak muncul
+
+Jalankan:
+
+php -m | findstr /I "pgsql pdo"
+
+Jika tidak ada:
+
+pdo_pgsql
+pgsql
+
+periksa kembali:
+
+php --ini
+
+Kemudian pastikan file php.ini yang diedit adalah file yang benar.
+
+B. php.ini sudah diedit tetapi tetap tidak muncul
+
+Kemungkinan besar PHP yang digunakan berbeda.
+
+Jalankan:
+
+where.exe php
+
+Kemudian:
+
+php --ini
+
+Pastikan lokasi PHP dan php.ini sesuai.
+
+Contoh:
+
+PHP:
+D:\xampp\php\php.exe
+
+php.ini:
+D:\xampp\php\php.ini
+
+atau:
+
+PHP:
+D:\laragon\bin\php\php-8.5.9-Win32-vs17-x64\php.exe
+
+php.ini:
+D:\laragon\bin\php\php-8.5.9-Win32-vs17-x64\php.ini
+C. php artisan optimize:clear masih menghasilkan could not find driver
+
+Jika error muncul ketika menjalankan:
+
+php artisan optimize:clear
+
+dan error menunjukkan:
+
+could not find driver
+(Connection: pgsql)
+
+maka Laravel sedang mencoba menggunakan PostgreSQL bahkan ketika melakukan operasi cache.
+
+Periksa konfigurasi .env.
+
+Pastikan konfigurasi database sesuai dengan Supabase.
+
+Contoh:
+
+DB_CONNECTION=pgsql
+DB_HOST=...
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=...
+
+Jangan memasukkan password database ke dalam dokumentasi atau repository GitHub.
+
+
+
+
+20. Jangan Commit File .env
+
+File:
+
+.env
+
+berisi informasi sensitif seperti:
+
+DB_PASSWORD
+SUPABASE_KEY
+API_KEY
+
+Jangan melakukan:
+
+git add .env
+
+dan jangan commit .env ke repository.
+
+Pastikan .env terdapat di .gitignore.
+
+Yang boleh dimasukkan ke repository adalah:
+
+.env.example
+
+Contoh:
+
+DB_CONNECTION=pgsql
+DB_HOST=your-host
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=your-password
+
+Gunakan placeholder dan jangan memasukkan credential asli.
+
+
+
+
+21. Checklist Environment Developer
+
+Sebelum menjalankan backend StematelART, setiap developer disarankan memastikan:
+
+[ ] PHP sudah terinstall
+[ ] PHP version sesuai project
+[ ] where.exe php menunjukkan PHP yang benar
+[ ] php --ini menunjukkan php.ini yang benar
+[ ] pdo_pgsql aktif
+[ ] pgsql aktif
+[ ] .env sudah dikonfigurasi
+[ ] Supabase database dapat diakses
+[ ] Laravel dapat membaca database
+[ ] php artisan optimize:clear berhasil
+[ ] php artisan migrate:status berhasil
+[ ] DB::connection()->getPdo() berhasil
+[ ] php artisan serve berhasil
+
+
+
+
+22. Perintah Diagnosis Lengkap
+
+Jika developer lain mengalami masalah yang sama, jalankan perintah berikut satu per satu:
+
+php -v
+where.exe php
+php --ini
+php -m | findstr /I "pgsql pdo"
+
+Kemudian:
+
+php artisan optimize:clear
+
+Lalu:
+
+php artisan migrate:status
+
+Jika masih bermasalah, test menggunakan:
+
+php artisan tinker
+
+Kemudian:
+
+DB::connection()->getPdo();
+
+
+
+
+23. Kesimpulan
+
+Error:
+
+could not find driver
+
+pada Laravel + Supabase PostgreSQL umumnya terjadi karena PHP yang digunakan Laravel belum memiliki PostgreSQL driver yang aktif.
+
+Driver yang dibutuhkan adalah:
+
+pdo_pgsql
+pgsql
+
+Langkah utama untuk mengatasinya:
+
+1. Cek PHP:
+   php -v
+
+2. Cek lokasi PHP:
+   where.exe php
+
+3. Cek php.ini:
+   php --ini
+
+4. Cek driver:
+   php -m | findstr /I "pgsql pdo"
+
+5. Aktifkan:
+   extension=pdo_pgsql
+   extension=pgsql
+
+6. Restart terminal
+
+7. Verifikasi:
+   php -m | findstr /I "pgsql pdo"
+
+8. Clear Laravel:
+   php artisan optimize:clear
+
+9. Test database:
+   php artisan migrate:status
+
+10. Test koneksi:
+    php artisan tinker
+
+11. Jalankan:
+    DB::connection()->getPdo();
+
+Jika hasil akhirnya menunjukkan:
+
+pdo_pgsql
+pgsql
+
+dan:
+
+CONNECTION_STATUS: "Connection OK; waiting to send."
+
+maka environment PHP sudah siap menggunakan PostgreSQL dan Laravel dapat terhubung ke Supabase.
+
+Quick Fix
+
+Jika developer hanya membutuhkan langkah singkat:
+
+php -v
+where.exe php
+php --ini
+php -m | findstr /I "pgsql pdo"
+
+Jika pdo_pgsql dan pgsql belum muncul:
+
+Buka php.ini dari hasil php --ini.
+Cari:
+;extension=pdo_pgsql
+;extension=pgsql
+Ubah menjadi:
+extension=pdo_pgsql
+extension=pgsql
+Simpan.
+Tutup dan buka kembali terminal.
+Jalankan:
+php -m | findstr /I "pgsql pdo"
+Pastikan muncul:
+pdo_pgsql
+pgsql
+Kemudian:
+php artisan optimize:clear
+php artisan migrate:status
+Verifikasi koneksi:
+php artisan tinker
+DB::connection()->getPdo();
+
+Jika muncul:
+
+Pdo\Pgsql
+
+dan:
+
+Connection OK
+
+maka masalah could not find driver telah berhasil diperbaiki.
+
+
