@@ -86,7 +86,6 @@ Berikut teknologi yang benar-benar digunakan di repository backend:
 | Eloquent ORM | bawaan Laravel | Object-relational mapping |
 | Composer | - | Dependency management PHP |
 | Laravel Tinker | ^2.10.1 | REPL untuk berinteraksi dengan aplikasi |
-| Laravel Sail | ^1.41 (dev) | Docker-based development environment |
 | Laravel Pint | ^1.24 (dev) | PHP code style fixer |
 | PHPUnit | ^11.5.50 (dev) | Unit & feature test |
 | Laravel Pail | ^1.2.2 (dev) | Real-time log tailing |
