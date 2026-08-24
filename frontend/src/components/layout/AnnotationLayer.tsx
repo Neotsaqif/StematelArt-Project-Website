@@ -33,7 +33,7 @@ export function AnnotationLayer({ on }) {
         host.appendChild(box);
       });
     };
-    const queue = () => { if (raf) return; raf = setTimeout(() => { raf = 0; paint(); }, 60); };
+    const queue = () => { if (raf) return; raf = window.setTimeout(() => { raf = 0; paint(); }, 60); };
     paint();
     const tick = setInterval(paint, 500);
     window.addEventListener("scroll", queue, true);
