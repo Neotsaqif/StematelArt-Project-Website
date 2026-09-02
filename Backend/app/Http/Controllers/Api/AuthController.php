@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
+
 class AuthController extends Controller
 {
     public function register(Request $request)
@@ -39,28 +40,41 @@ class AuthController extends Controller
     }
 
     public function login(Request $request)
-    {
-        $validated = $request->validate([
-            'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
-        ]);
+{
+    $validated = $request->validate([
+        'email' => ['required', 'email'],
+        'password' => ['required', 'string'],
+    ]);
 
-        if (!Auth::attempt($validated)) {
-            throw ValidationException::withMessages([
-                'email' => ['Kombinasi email dan kata sandi tidak cocok.'],
-            ]);
-        }
+    $user = User::where('email', $validated['email'])->first();
 
-        $user = User::where('email', $request->email)->firstOrFail();
-        $token = $user->createToken('auth_token')->plainTextToken;
-
+    if (!$user || !Hash::check($validated['password'], $user->password)) {
         return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'data' => [
-                'user' => $user,
-                'token' => $token,
-            ],
-        ]);
+            'success' => false,
+            'message' => 'Email atau password salah.',
+        ], 401);
     }
+
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'data' => [
+            'user' => $user,
+            'token' => $token,
+        ],
+    ], 200);
+}
+
+public function logout(Request $request)
+{
+    $request->user()->currentAccessToken()->delete();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Logout successful',
+    ]);
+}
+
 }
