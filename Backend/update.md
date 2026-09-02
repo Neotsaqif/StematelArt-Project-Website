@@ -72,3 +72,36 @@ php artisan migrate:status belum dapat membaca Supabase dari sandbox karena kone
 - php artisan migrate:status: seluruh 7 migration berstatus Ran; migration Phase 2 berjalan pada batch 4.
 - git diff --check: berhasil tanpa whitespace error.
 - package-lock.json, .env, frontend, credential, dependency, dan migration lama tidak diubah.
+
+---
+
+# Update Phase 3 — Follow System
+
+## Perubahan
+
+- Menambahkan migration baru untuk tabel follows.
+- Menambahkan model Follow.
+- Menambahkan relationship followers() dan following() pada User.
+- Menambahkan FollowController untuk follow, unfollow, followers, dan following.
+- Menambahkan route follow dengan auth:sanctum dan route model binding.
+- Menambahkan pagination aman dengan default 15 dan maksimum 50.
+- Menambahkan perlindungan self-follow, duplicate follow, dan follower_id injection.
+- Menambahkan feature test FollowTest.
+- Memperbarui dokumentasi Phase 3 pada backend.md.
+
+## Endpoint Baru
+
+- POST /api/users/{user}/follow
+- DELETE /api/users/{user}/follow
+- GET /api/users/{user}/followers
+- GET /api/users/{user}/following
+
+## Validasi
+
+- Focused FollowTest: 14 test, 38 assertion lulus.
+- Focused FollowTest: 14 test, 38 assertion lulus.
+- Full suite: 39 test, 119 assertion lulus.
+- php artisan route:list: berhasil, 21 route terdaftar.
+- php artisan migrate:status: seluruh 8 migration berstatus Ran; migration Phase 3 berjalan pada batch 5.
+- git diff --check: berhasil tanpa whitespace error.
+- Tidak ada post, like, comment, save, share, watermark, notification, frontend, credential, atau package-lock.json yang diubah.

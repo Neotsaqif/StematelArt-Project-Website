@@ -2333,3 +2333,54 @@ php artisan test tests/Feature/ProfileTest.php
 Jalankan seluruh test backend dengan:
 
 composer test
+
+---
+
+# Phase 3 — Follow System
+
+## Database dan Relationship
+
+Migration baru membuat tabel follows dengan:
+
+- follower_id — user yang melakukan follow.
+- following_id — user yang diikuti.
+- unique constraint pada follower_id dan following_id.
+- foreign key ke users dengan cascade delete.
+
+Model Follow menyediakan relationship follower() dan following(). User menyediakan:
+
+- followers() — users yang mengikuti user tersebut.
+- following() — users yang diikuti user tersebut.
+
+Follower count tidak disimpan redundan.
+
+## Endpoint
+
+Semua endpoint membutuhkan Bearer token Sanctum:
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| POST | /api/users/{user}/follow | Follow target user |
+| DELETE | /api/users/{user}/follow | Unfollow target user |
+| GET | /api/users/{user}/followers | Daftar followers target |
+| GET | /api/users/{user}/following | Daftar following target |
+
+Authenticated user selalu digunakan sebagai follower. follower_id dari request body tidak diproses.
+
+Follow berhasil mengembalikan 201 dengan following true. Self-follow mengembalikan 422. Duplicate follow mengembalikan 409. Unfollow yang tidak memiliki relationship mengembalikan 404.
+
+## Pagination dan Security
+
+Followers dan following menggunakan pagination Eloquent dengan default 15 item per halaman. Parameter per_page menerima nilai 1 sampai 50.
+
+Route model binding menghasilkan response 404 standar jika target user tidak ditemukan. Response user tidak mengembalikan password, remember_token, atau personal access tokens.
+
+Semua role yang telah tersedia — user, artist, dan admin — dapat follow/unfollow. Tidak ada role restriction baru.
+
+## Testing
+
+Feature test Phase 3 tersedia pada tests/Feature/FollowTest.php dan mencakup authorization, self-follow, duplicate relationship, unfollow ownership, pagination, follower_id injection, route binding, sensitive fields, cascade delete, dan database unique constraint.
+
+Jalankan focused test dengan:
+
+php artisan test tests/Feature/FollowTest.php
