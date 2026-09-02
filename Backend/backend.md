@@ -2384,3 +2384,63 @@ Feature test Phase 3 tersedia pada tests/Feature/FollowTest.php dan mencakup aut
 Jalankan focused test dengan:
 
 php artisan test tests/Feature/FollowTest.php
+
+---
+
+# Phase 4 — Post Core
+
+## Database dan Relationship
+
+Migration baru membuat tabel posts dengan:
+
+- user_id — foreign key ke users dengan cascade delete.
+- title — judul artwork.
+- description — deskripsi nullable.
+- tags — tags nullable.
+- artwork_path — storage path/reference nullable.
+- timestamps.
+
+Binary artwork tidak disimpan di PostgreSQL. Upload dan storage artwork belum termasuk Phase 4 dan akan dikerjakan pada phase storage berikutnya.
+
+Model Post memiliki relationship user() ke User. User memiliki relationship posts() ke Post.
+
+## Endpoint
+
+Semua endpoint post membutuhkan Bearer token Sanctum:
+
+| Method | Endpoint | Authorization |
+|---|---|---|
+| GET | /api/posts | Semua authenticated user |
+| GET | /api/posts/{post} | Semua authenticated user |
+| POST | /api/posts | Artist atau admin |
+| PUT | /api/posts/{post} | Owner artist atau admin |
+| DELETE | /api/posts/{post} | Owner artist atau admin |
+
+Create selalu menggunakan authenticated user sebagai owner. user_id dari request body tidak diproses.
+
+## Validation dan Authorization
+
+Field create/update:
+
+- title: required, string, maksimum 255 karakter.
+- description: nullable string, maksimum 5000 karakter.
+- tags: nullable string, maksimum 1000 karakter.
+- artwork_path: nullable string, maksimum 2048 karakter.
+
+User biasa tidak dapat membuat, mengubah, atau menghapus post. Artist hanya dapat mengubah atau menghapus post miliknya sendiri. Admin dapat mengelola post user lain. Policy PostPolicy digunakan untuk aturan view, create, update, dan delete.
+
+Field id, user_id, role, dan author reassignment tidak dapat diubah melalui request.
+
+## Pagination dan Response
+
+GET /api/posts menggunakan pagination dengan default 15 item per halaman. Parameter per_page dibatasi dari 1 sampai 50. Author di-eager-load dengan field publik terbatas untuk menghindari N+1 query.
+
+Response post menyertakan post dan author tanpa password, remember_token, atau personal access tokens.
+
+## Testing
+
+Feature test Phase 4 tersedia pada tests/Feature/PostTest.php dan mencakup role authorization, ownership, admin access, validation, pagination, injection prevention, relationship, cascade delete, route model binding, dan sensitive fields.
+
+Jalankan focused test dengan:
+
+php artisan test tests/Feature/PostTest.php

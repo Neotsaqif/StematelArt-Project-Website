@@ -105,3 +105,41 @@ php artisan migrate:status belum dapat membaca Supabase dari sandbox karena kone
 - php artisan migrate:status: seluruh 8 migration berstatus Ran; migration Phase 3 berjalan pada batch 5.
 - git diff --check: berhasil tanpa whitespace error.
 - Tidak ada post, like, comment, save, share, watermark, notification, frontend, credential, atau package-lock.json yang diubah.
+
+---
+
+# Update Phase 4 — Post Core
+
+## Perubahan
+
+- Menambahkan migration baru untuk tabel posts.
+- Menambahkan model Post dan relationship User::posts() serta Post::user().
+- Menambahkan PostPolicy untuk role dan ownership.
+- Menambahkan PostController untuk list, show, create, update, dan delete.
+- Menambahkan route post di bawah auth:sanctum.
+- Menambahkan pagination default 15 dengan maksimum 50.
+- Menambahkan validasi title, description, tags, artwork_path, dan per_page.
+- Menambahkan perlindungan user_id injection dan role escalation.
+- Menambahkan feature test PostTest.
+- Memperbarui dokumentasi Phase 4 pada backend.md.
+
+## Endpoint Baru
+
+- GET /api/posts
+- GET /api/posts/{post}
+- POST /api/posts
+- PUT /api/posts/{post}
+- DELETE /api/posts/{post}
+
+## Batasan
+
+artwork_path hanya storage reference. Upload binary, Supabase Storage, penghapusan file artwork, watermark, likes, comments, saves, shares, dan moderation belum diimplementasikan pada Phase 4.
+
+## Validasi
+
+- Focused PostTest: 14 test, 53 assertion lulus.
+- Full suite: 53 test, 172 assertion lulus.
+- php artisan route:list: berhasil, 26 route terdaftar.
+- php artisan migrate:status: seluruh 9 migration berstatus Ran; migration Phase 4 berjalan pada batch 6.
+- git diff --check: berhasil tanpa whitespace error.
+- Tidak ada migration lama, frontend, .env, credential, dependency, atau package-lock.json yang diubah.
