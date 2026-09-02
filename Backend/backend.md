@@ -2237,4 +2237,37 @@ Connection OK
 
 maka masalah could not find driver telah berhasil diperbaiki.
 
+---
+
+# Phase 1 — Account Security
+
+## Endpoint
+
+| Method | Endpoint | Authentication | Authorization |
+|---|---|---|---|
+| POST | /api/register | Tidak | Publik; role selalu user |
+| POST | /api/login | Tidak | Publik |
+| POST | /api/logout | Bearer token Sanctum | User terautentikasi |
+| GET | /api/user | Bearer token Sanctum | User terautentikasi |
+| GET | /api/artist/test | Bearer token Sanctum | Role artist |
+| GET | /api/admin/test | Bearer token Sanctum | Role admin |
+
+## Validation dan Response Error
+
+Endpoint API mengembalikan JSON dengan field success, message, dan errors.
+
+Status yang diterapkan pada Phase 1:
+
+- 401 untuk token tidak ada, tidak valid, atau credential login salah.
+- 403 untuk role yang tidak memiliki akses.
+- 404 untuk resource API yang tidak ditemukan.
+- 422 untuk validation error, dengan detail field pada errors.
+
+Registration tidak menerima role dari client. Nilai role selalu ditetapkan server sebagai user.
+
+## Database dan Testing
+
+Authentication menggunakan Laravel Sanctum dan tabel personal_access_tokens. Role disimpan pada kolom users.role; tidak ada migration baru pada Phase 1.
+
+Feature test tersedia di tests/Feature/AuthSecurityTest.php dan mencakup registration, role injection, validation, login, protected route, logout token revocation, role authorization, dan API 404.
 
