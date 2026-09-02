@@ -2271,3 +2271,65 @@ Authentication menggunakan Laravel Sanctum dan tabel personal_access_tokens. Rol
 
 Feature test tersedia di tests/Feature/AuthSecurityTest.php dan mencakup registration, role injection, validation, login, protected route, logout token revocation, role authorization, dan API 404.
 
+---
+
+# Phase 2 — Account Profile & Basic Settings
+
+## Database
+
+Phase 2 menambahkan migration baru tanpa mengubah migration users yang sudah ada:
+
+- users.bio — nullable text untuk bio profile.
+- users.avatar — nullable string untuk storage path/reference avatar.
+- user_settings — tabel one-to-one dengan users.
+- user_settings.theme — light atau dark, default light.
+- user_settings.notifications_enabled — boolean, default true.
+
+Avatar binary tidak disimpan di PostgreSQL. Database hanya menyimpan path/reference file.
+
+## Profile Endpoint
+
+Semua endpoint berikut membutuhkan Bearer token Sanctum:
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | /api/profile | Mengambil profile authenticated user |
+| PUT | /api/profile | Mengubah name dan bio sendiri |
+| POST | /api/profile/avatar | Mengunggah atau mengganti avatar |
+
+Update profile menerima name required string maksimum 255 karakter dan bio nullable string maksimum 5000 karakter. Email, role, password, id, token, email_verified_at, dan remember_token tidak dapat diubah melalui endpoint profile.
+
+## Avatar
+
+Avatar dikirim sebagai multipart field avatar. File yang diterima adalah jpg, jpeg, png, atau webp dengan ukuran maksimum 5 MB.
+
+Laravel Storage digunakan pada disk PROFILE_AVATAR_DISK dengan default public. Filename asli tidak digunakan sebagai path penyimpanan; Laravel membuat nama file baru.
+
+Saat replacement, file baru disimpan lebih dahulu. Reference database diperbarui setelah upload berhasil, kemudian file lama dihapus. Jika update database gagal, file baru dihapus sebagai rollback praktis.
+
+Supabase Storage belum dikonfigurasi pada repository ini. Implementasi saat ini menggunakan filesystem disk Laravel dan dapat diarahkan ke disk cloud setelah konfigurasi storage tersedia. Jangan memasukkan credential ke source code atau dokumentasi.
+
+## Settings Endpoint
+
+Semua endpoint settings membutuhkan Bearer token Sanctum:
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | /api/settings | Mengambil settings sendiri dan membuat default jika belum ada |
+| PUT | /api/settings | Mengubah settings sendiri secara parsial |
+
+Field yang tersedia adalah theme (light atau dark) dan notifications_enabled (boolean). Settings tidak menyimpan arbitrary JSON dan bukan mekanisme authorization.
+
+## Security dan Testing
+
+Profile dan settings selalu menggunakan authenticated user dari request. Tidak ada endpoint yang menerima user ID untuk mengubah account user lain. Field role pada payload diabaikan sehingga user tidak dapat melakukan role escalation.
+
+Response profile mengikuti hidden fields User sehingga password dan remember_token tidak dikembalikan. Personal access tokens tidak diload atau dikembalikan.
+
+Test Phase 2 tersedia pada tests/Feature/ProfileTest.php. Jalankan focused test dengan:
+
+php artisan test tests/Feature/ProfileTest.php
+
+Jalankan seluruh test backend dengan:
+
+composer test

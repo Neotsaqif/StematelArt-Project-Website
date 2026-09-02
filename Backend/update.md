@@ -30,3 +30,45 @@ Branch: fitur-account-post-social
 ## Catatan
 
 php artisan migrate:status belum dapat membaca Supabase dari sandbox karena koneksi database ditolak oleh environment. Phase 1 tidak menambahkan atau mengubah migration.
+
+---
+
+# Update Phase 2 — Account Profile & Basic Settings
+
+## Perubahan
+
+- Menambahkan migration baru untuk field users.bio dan users.avatar.
+- Menambahkan migration baru untuk tabel user_settings dengan theme dan notifications_enabled.
+- Menambahkan model UserSetting serta relationship User::settings().
+- Menambahkan ProfileController untuk melihat dan mengubah profile authenticated user.
+- Menambahkan upload dan replacement avatar menggunakan Laravel Storage.
+- Menambahkan SettingsController untuk settings account dasar.
+- Menambahkan route profile dan settings di bawah auth:sanctum.
+- Menambahkan konfigurasi PROFILE_AVATAR_DISK dengan default public.
+- Menambahkan feature test profile, avatar, settings, validation, dan role escalation.
+- Memperbarui dokumentasi Phase 2 pada backend.md.
+
+## Endpoint Baru
+
+- GET /api/profile
+- PUT /api/profile
+- POST /api/profile/avatar
+- GET /api/settings
+- PUT /api/settings
+
+## Keamanan
+
+- Profile dan settings hanya menggunakan authenticated user dari request.
+- Email, role, password, token, dan field sensitif tidak dapat diubah melalui profile API.
+- Upload avatar dibatasi pada jpg, jpeg, png, webp dengan maksimum 5 MB.
+- Filename asli tidak dipercaya dan tidak digunakan sebagai storage path.
+- Supabase Storage belum dikonfigurasi; implementasi menggunakan disk Laravel yang tersedia.
+
+## Validasi
+
+- Focused test Phase 2: 13 test, 47 assertion lulus.
+- Full suite: 25 test, 81 assertion lulus.
+- php artisan route:list: berhasil, 17 route terdaftar.
+- php artisan migrate:status: seluruh 7 migration berstatus Ran; migration Phase 2 berjalan pada batch 4.
+- git diff --check: berhasil tanpa whitespace error.
+- package-lock.json, .env, frontend, credential, dependency, dan migration lama tidak diubah.
