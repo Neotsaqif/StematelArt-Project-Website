@@ -2444,3 +2444,29 @@ Feature test Phase 4 tersedia pada tests/Feature/PostTest.php dan mencakup role 
 Jalankan focused test dengan:
 
 php artisan test tests/Feature/PostTest.php
+
+## Phase 5 — Supabase Storage dan Artwork Upload
+
+Artwork kini diunggah sebagai multipart file melalui endpoint post. Laravel memakai disk S3-compatible `supabase` yang diarahkan ke bucket `artworks`; bucket tidak dibuat otomatis oleh aplikasi. Adapter `league/flysystem-aws-s3-v3` sudah tersedia pada dependency project.
+
+Konfigurasi environment yang diperlukan (tanpa menyimpan credential di repository):
+
+- `ARTWORK_STORAGE_DISK=supabase`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_DEFAULT_REGION`
+- `AWS_BUCKET=artworks`
+- `AWS_ENDPOINT`
+- `AWS_USE_PATH_STYLE_ENDPOINT=true`
+
+Format storage key adalah `artworks/{user_id}/{uuid}.{extension}`. Nama file asli dan `artwork_path` dari client tidak digunakan.
+
+`POST /api/posts` membutuhkan field `title`, `description` opsional, `tags` opsional, dan `artwork` wajib. Artwork harus berupa `jpg`, `jpeg`, `png`, atau `webp`, maksimum 10 MB. Update post boleh tanpa file untuk metadata saja, atau dengan artwork baru untuk replacement. File baru diunggah sebelum reference database diperbarui; kegagalan database menghapus file baru dan mempertahankan reference lama.
+
+Response post berisi canonical `artwork_path` dan `artwork_url`. URL dibuat sebagai signed temporary URL selama 15 menit jika driver mendukung `temporaryUrl`; jika tidak, nilainya `null`, bukan URL publik palsu. Credential dan signature tidak pernah dikembalikan.
+
+Saat post dihapus, record database dihapus lebih dahulu lalu object pada path trusted post dihapus. Jika cleanup gagal, warning dicatat dan object orphan perlu dibersihkan secara manual. Tidak ada watermark pada Phase 5.
+
+Automated tests memakai `Storage::fake` pada disk terkonfigurasi dan tidak membutuhkan Supabase nyata. Verifikasi manual Supabase: isi environment lokal, jalankan `php artisan config:clear`, upload artwork melalui API, cek object pada bucket `artworks` dan `posts.artwork_path`, lalu uji replacement serta delete untuk memastikan object lama dibersihkan.
+
+Hasil verifikasi lokal: `PostTest` 14 test/52 assertions, `ArtworkStorageTest` 8 test/31 assertions, dan full `composer test` 61 test/202 assertions lulus. Semua 9 migration berstatus `Ran`; Phase 5 tidak menambah migration.

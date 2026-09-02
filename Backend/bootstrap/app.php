@@ -8,6 +8,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use App\Http\Middleware\RoleMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -64,6 +65,63 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'Resource not found.',
                     'errors' => (object) [],
                 ], 404);
+            }
+        });
+
+        $exceptions->render(function (\Throwable $exception, Request $request) {
+            if ($request->is('api/*')) {
+                if ($exception instanceof AuthenticationException) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unauthenticated.',
+                        'errors' => (object) [],
+                    ], 401);
+                }
+
+                if ($exception instanceof AuthorizationException) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Forbidden.',
+                        'errors' => (object) [],
+                    ], 403);
+                }
+
+                if ($exception instanceof ValidationException) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The given data was invalid.',
+                        'errors' => $exception->errors(),
+                    ], 422);
+                }
+
+                if ($exception instanceof NotFoundHttpException) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Resource not found.',
+                        'errors' => (object) [],
+                    ], 404);
+                }
+
+                if ($exception instanceof HttpExceptionInterface
+                    && in_array($exception->getStatusCode(), [401, 403, 404], true)) {
+                    $status = $exception->getStatusCode();
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => match ($status) {
+                            401 => 'Unauthenticated.',
+                            403 => 'Forbidden.',
+                            default => 'Resource not found.',
+                        },
+                        'errors' => (object) [],
+                    ], $status);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An unexpected server error occurred.',
+                    'errors' => (object) [],
+                ], 500);
             }
         });
     })->create();

@@ -16,6 +16,7 @@ return [
     'default' => env('FILESYSTEM_DISK', 'local'),
 
     'profile_avatar_disk' => env('PROFILE_AVATAR_DISK', 'public'),
+    'artwork_storage_disk' => env('ARTWORK_STORAGE_DISK', 'supabase'),
 
     /*
     |--------------------------------------------------------------------------
@@ -58,6 +59,18 @@ return [
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'supabase' => [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'bucket' => env('AWS_BUCKET', 'artworks'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true),
             'throw' => false,
             'report' => false,
         ],

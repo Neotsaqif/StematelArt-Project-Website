@@ -143,3 +143,38 @@ artwork_path hanya storage reference. Upload binary, Supabase Storage, penghapus
 - php artisan migrate:status: seluruh 9 migration berstatus Ran; migration Phase 4 berjalan pada batch 6.
 - git diff --check: berhasil tanpa whitespace error.
 - Tidak ada migration lama, frontend, .env, credential, dependency, atau package-lock.json yang diubah.
+
+---
+
+# Update Phase 5 — Supabase Storage dan Artwork Upload
+
+## Perubahan
+
+- Menambahkan disk `supabase` S3-compatible dan konfigurasi `ARTWORK_STORAGE_DISK`.
+- Menambahkan `ArtworkStorageService` untuk upload generated path, delete trusted path, dan temporary URL 15 menit.
+- Mengubah create post menjadi upload multipart `artwork` wajib.
+- Menambahkan replacement artwork pada update dan cleanup artwork saat delete post.
+- Menambahkan rollback praktis saat database gagal dan warning aman saat cleanup gagal.
+- Menambahkan focused `ArtworkStorageTest` dengan fake configured disk.
+- Memperbarui `PostTest` agar menggunakan fake disk yang sama.
+
+## Batasan
+
+Supabase bucket nyata belum diverifikasi dari environment ini. Automated tests menggunakan fake filesystem. Bucket harus dibuat dan credential dikonfigurasi di environment deployment; watermark belum termasuk Phase 5.
+
+## Validasi
+
+- Artwork: image `jpg`, `jpeg`, `png`, atau `webp`, maksimum 10 MB.
+- Path: `artworks/{user_id}/{uuid}.{extension}`; `artwork_path` client diabaikan.
+- `artwork_url`: signed temporary URL bila driver mendukung, selain itu `null`.
+
+## Hasil Verifikasi Phase 5
+
+- `php artisan config:clear`: berhasil.
+- `php artisan migrate:status`: seluruh 9 migration berstatus `Ran` sampai migration posts batch 6; tidak ada migration baru pada Phase 5.
+- `php artisan route:list`: berhasil, 26 route terdaftar.
+- `php artisan test tests/Feature/PostTest.php`: 14 test, 52 assertion lulus.
+- `php artisan test tests/Feature/ArtworkStorageTest.php`: 8 test, 31 assertion lulus.
+- `composer test`: 61 test, 202 assertion lulus.
+- `git diff --check`: berhasil tanpa whitespace error.
+- Supabase nyata belum diuji; automated storage test menggunakan fake configured disk.

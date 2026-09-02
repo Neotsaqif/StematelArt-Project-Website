@@ -5,11 +5,19 @@ namespace Tests\Feature;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PostTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->fakeArtworkStorage();
+    }
 
     public function test_unauthenticated_user_cannot_list_or_view_posts(): void
     {
@@ -58,15 +66,16 @@ class PostTest extends TestCase
     {
         $artist = User::factory()->create(['role' => 'artist']);
         $otherArtist = User::factory()->create(['role' => 'artist']);
+        $this->fakeArtworkStorage();
 
         $response = $this->actingAs($artist, 'sanctum')
-            ->postJson('/api/posts', [
+            ->post('/api/posts', [
                 'user_id' => $otherArtist->id,
                 'role' => 'admin',
                 'title' => 'First Artwork',
                 'description' => 'A description.',
                 'tags' => 'watercolor, nature',
-                'artwork_path' => 'artworks/first.jpg',
+                'artwork' => UploadedFile::fake()->image('first.jpg'),
             ])
             ->assertCreated()
             ->assertJsonPath('data.post.user_id', $artist->id);
@@ -84,9 +93,13 @@ class PostTest extends TestCase
     public function test_admin_can_create_post(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
+        $this->fakeArtworkStorage();
 
         $this->actingAs($admin, 'sanctum')
-            ->postJson('/api/posts', ['title' => 'Admin Artwork'])
+            ->post('/api/posts', [
+                'title' => 'Admin Artwork',
+                'artwork' => UploadedFile::fake()->image('admin.jpg'),
+            ])
             ->assertCreated()
             ->assertJsonPath('data.post.user_id', $admin->id);
     }
@@ -149,13 +162,12 @@ class PostTest extends TestCase
         $post = $this->createPost($artist);
 
         $this->actingAs($artist, 'sanctum')
-            ->postJson('/api/posts', [
+            ->post('/api/posts', [
                 'description' => str_repeat('x', 5001),
                 'tags' => str_repeat('x', 1001),
-                'artwork_path' => str_repeat('x', 2049),
             ])
             ->assertUnprocessable()
-            ->assertJsonStructure(['errors' => ['title', 'description', 'tags', 'artwork_path']]);
+            ->assertJsonStructure(['errors' => ['title', 'description', 'artwork']]);
 
         $this->actingAs($artist, 'sanctum')
             ->putJson("/api/posts/{$post->id}", [
@@ -235,5 +247,10 @@ class PostTest extends TestCase
             'tags' => 'test',
             'artwork_path' => 'artworks/test.jpg',
         ], $attributes));
+    }
+
+    private function fakeArtworkStorage(): void
+    {
+        Storage::fake(config('filesystems.artwork_storage_disk', 'supabase'));
     }
 }
