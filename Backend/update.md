@@ -178,3 +178,36 @@ Supabase bucket nyata belum diverifikasi dari environment ini. Automated tests m
 - `composer test`: 61 test, 202 assertion lulus.
 - `git diff --check`: berhasil tanpa whitespace error.
 - Supabase nyata belum diuji; automated storage test menggunakan fake configured disk.
+
+---
+
+# Update Phase 6 — Server-Side Artwork Watermark
+
+## Perubahan
+
+- Menambahkan `ArtworkWatermarkService` berbasis native PHP GD.
+- Menerapkan watermark `StematelART` di posisi bottom-right sebelum upload storage.
+- Mempertahankan format JPG, PNG, dan WebP serta dimensi image.
+- Mengubah storage flow agar menyimpan binary hasil watermark, bukan file asli.
+- Mempertahankan rollback upload, replacement, ownership, authorization, dan cleanup Phase 5.
+- Menambahkan `ArtworkWatermarkTest` dengan verifikasi binary output benar-benar berubah.
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/ArtworkWatermarkTest.php`: 9 test, 33 assertions lulus.
+- `php artisan test tests/Feature/PostTest.php`: 14 test, 52 assertions lulus.
+- Native GD: tersedia; JPEG, PNG, WebP, dan TrueType text rendering tersedia.
+- Intervention Image: tidak terpasang dan tidak diperlukan.
+- Migration database: tidak berubah; schema Phase 5 tetap digunakan.
+
+- `php artisan optimize:clear`: berhasil dengan akses database yang tersedia.
+- `php artisan migrate:status`: seluruh 9 migration berstatus `Ran`; tidak ada migration Phase 6.
+- `php artisan route:list`: berhasil, 26 route terdaftar.
+- `php artisan test tests/Feature/ArtworkWatermarkTest.php`: 9 test, 33 assertions lulus.
+- `php artisan test tests/Feature/PostTest.php`: 14 test, 52 assertions lulus.
+- `composer test`: 70 test, 235 assertions lulus.
+- `git diff --check`: berhasil tanpa whitespace error.
+
+## Batasan
+
+Verifikasi upload ke bucket Supabase nyata belum dilakukan dalam automated test. Test memakai fake filesystem. Verifikasi visual pada temporary URL Supabase perlu dilakukan manual setelah environment deployment aktif.

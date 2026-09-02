@@ -2470,3 +2470,15 @@ Saat post dihapus, record database dihapus lebih dahulu lalu object pada path tr
 Automated tests memakai `Storage::fake` pada disk terkonfigurasi dan tidak membutuhkan Supabase nyata. Verifikasi manual Supabase: isi environment lokal, jalankan `php artisan config:clear`, upload artwork melalui API, cek object pada bucket `artworks` dan `posts.artwork_path`, lalu uji replacement serta delete untuk memastikan object lama dibersihkan.
 
 Hasil verifikasi lokal: `PostTest` 14 test/52 assertions, `ArtworkStorageTest` 8 test/31 assertions, dan full `composer test` 61 test/202 assertions lulus. Semua 9 migration berstatus `Ran`; Phase 5 tidak menambah migration.
+
+## Phase 6 — Artwork Watermark
+
+Artwork diberi watermark server-side sebelum binary disimpan ke Supabase Storage untuk mengurangi risiko penggunaan ulang tanpa atribusi. Implementasi menggunakan native PHP GD yang tersedia pada environment project; tidak ada dependency image-processing tambahan.
+
+Watermark berisi teks `StematelART`, ditempatkan di bottom-right dengan margin kecil, shadow, dan warna semi-transparan. Dimensi artwork tidak diubah. JPG, PNG, dan WebP dipertahankan saat output; GD secara alami tidak membawa metadata EXIF ke output hasil encode.
+
+Flow upload sekarang menjadi: validasi upload → decode image → apply watermark → encode format asli → simpan generated storage key → simpan `posts.artwork_path`. File asli tidak pernah diunggah terlebih dahulu. Path tetap menggunakan format `artworks/{user_id}/{uuid}.{extension}`.
+
+Replacement memproses dan mengunggah artwork baru terlebih dahulu. Reference database diperbarui sebelum artwork lama dihapus. Jika decoding, watermark, upload, atau update database gagal, artwork lama tetap dipertahankan dan file baru dibersihkan jika sudah tersimpan. Delete post tetap menghapus final artwork berdasarkan path trusted dari record post.
+
+Automated watermark tests menggunakan `Storage::fake()` dan memverifikasi binary output berbeda dari input serta masih dapat dibaca sebagai image. Verifikasi manual Supabase dilakukan dengan upload melalui Postman, membuka temporary URL, memastikan teks `StematelART` terlihat, lalu menguji replacement dan deletion.

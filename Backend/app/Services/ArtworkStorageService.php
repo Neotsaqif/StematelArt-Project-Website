@@ -12,20 +12,21 @@ class ArtworkStorageService
 {
     public function store(UploadedFile $file, int $userId): string
     {
+        return $this->storeContents($file->get(), strtolower($file->extension()), $userId);
+    }
+
+    public function storeContents(string $contents, string $extension, int $userId): string
+    {
         $diskName = config('filesystems.artwork_storage_disk', 'supabase');
-        $filename = Str::uuid()->toString().'.'.strtolower($file->extension());
+        $filename = Str::uuid()->toString().'.'.$extension;
         $path = 'artworks/'.$userId.'/'.$filename;
-        $storedPath = Storage::disk($diskName)->putFileAs(
-            'artworks/'.$userId,
-            $file,
-            $filename
-        );
+        $storedPath = Storage::disk($diskName)->put($path, $contents);
 
         if (!$storedPath) {
             throw new \RuntimeException('Artwork storage failed.');
         }
 
-        return $storedPath;
+        return $path;
     }
 
     public function delete(string $path): bool

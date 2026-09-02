@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\User;
 use App\Services\ArtworkStorageService;
+use App\Services\ArtworkWatermarkService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +17,8 @@ class PostController extends Controller
     private const AUTHOR_COLUMNS = 'id,name,email,role,bio,avatar';
 
     public function __construct(
-        private readonly ArtworkStorageService $artworkStorage
+        private readonly ArtworkStorageService $artworkStorage,
+        private readonly ArtworkWatermarkService $artworkWatermark
     ) {
     }
 
@@ -63,7 +65,12 @@ class PostController extends Controller
         $artworkPath = null;
 
         try {
-            $artworkPath = $this->artworkStorage->store($artwork, $request->user()->id);
+            $processedArtwork = $this->artworkWatermark->process($artwork);
+            $artworkPath = $this->artworkStorage->storeContents(
+                $processedArtwork['contents'],
+                $processedArtwork['extension'],
+                $request->user()->id
+            );
             $post = $request->user()->posts()->create([
                 ...$validated,
                 'artwork_path' => $artworkPath,
@@ -98,8 +105,10 @@ class PostController extends Controller
         $oldArtworkPath = $post->artwork_path;
 
         if (isset($validated['artwork'])) {
-            $newArtworkPath = $this->artworkStorage->store(
-                $validated['artwork'],
+            $processedArtwork = $this->artworkWatermark->process($validated['artwork']);
+            $newArtworkPath = $this->artworkStorage->storeContents(
+                $processedArtwork['contents'],
+                $processedArtwork['extension'],
                 $request->user()->id
             );
             unset($validated['artwork']);
