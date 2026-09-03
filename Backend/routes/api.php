@@ -8,9 +8,11 @@ use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\PostController;
 
-Route::post('/register', [AuthController::class, 'register']);
+Route::middleware('throttle:auth-register')
+    ->post('/register', [AuthController::class, 'register']);
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('throttle:auth-login')
+    ->post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return response()->json([

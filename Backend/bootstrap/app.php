@@ -6,8 +6,8 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use App\Http\Middleware\RoleMiddleware;
 
@@ -28,100 +28,42 @@ return Application::configure(basePath: dirname(__DIR__))
             return $request->is('api/*') || $request->expectsJson();
         });
 
-        $exceptions->render(function (AuthenticationException $exception, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthenticated.',
-                    'errors' => (object) [],
-                ], 401);
+        $exceptions->render(function (\Throwable $exception, Request $request) {
+            if (!$request->is('api/*')) {
+                return null;
             }
-        });
 
-        $exceptions->render(function (AuthorizationException $exception, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Forbidden.',
-                    'errors' => (object) [],
-                ], 403);
+            if ($exception instanceof HttpResponseException) {
+                return $exception->getResponse();
             }
-        });
 
-        $exceptions->render(function (ValidationException $exception, Request $request) {
-            if ($request->is('api/*')) {
+            if ($exception instanceof ValidationException) {
                 return response()->json([
                     'success' => false,
                     'message' => 'The given data was invalid.',
                     'errors' => $exception->errors(),
                 ], 422);
             }
-        });
 
-        $exceptions->render(function (NotFoundHttpException $exception, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Resource not found.',
-                    'errors' => (object) [],
-                ], 404);
-            }
-        });
+            $status = match (true) {
+                $exception instanceof AuthenticationException => 401,
+                $exception instanceof AuthorizationException => 403,
+                $exception instanceof HttpExceptionInterface
+                    && in_array($exception->getStatusCode(), [401, 403, 404, 429], true)
+                    => $exception->getStatusCode(),
+                default => 500,
+            };
 
-        $exceptions->render(function (\Throwable $exception, Request $request) {
-            if ($request->is('api/*')) {
-                if ($exception instanceof AuthenticationException) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Unauthenticated.',
-                        'errors' => (object) [],
-                    ], 401);
-                }
-
-                if ($exception instanceof AuthorizationException) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Forbidden.',
-                        'errors' => (object) [],
-                    ], 403);
-                }
-
-                if ($exception instanceof ValidationException) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'The given data was invalid.',
-                        'errors' => $exception->errors(),
-                    ], 422);
-                }
-
-                if ($exception instanceof NotFoundHttpException) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Resource not found.',
-                        'errors' => (object) [],
-                    ], 404);
-                }
-
-                if ($exception instanceof HttpExceptionInterface
-                    && in_array($exception->getStatusCode(), [401, 403, 404], true)) {
-                    $status = $exception->getStatusCode();
-
-                    return response()->json([
-                        'success' => false,
-                        'message' => match ($status) {
-                            401 => 'Unauthenticated.',
-                            403 => 'Forbidden.',
-                            default => 'Resource not found.',
-                        },
-                        'errors' => (object) [],
-                    ], $status);
-                }
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'An unexpected server error occurred.',
-                    'errors' => (object) [],
-                ], 500);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => match ($status) {
+                    401 => 'Unauthenticated.',
+                    403 => 'Forbidden.',
+                    404 => 'Resource not found.',
+                    429 => 'Too many requests. Please try again later.',
+                    default => 'An unexpected server error occurred.',
+                },
+                'errors' => (object) [],
+            ], $status);
         });
     })->create();

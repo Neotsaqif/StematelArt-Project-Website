@@ -2471,6 +2471,18 @@ Automated tests memakai `Storage::fake` pada disk terkonfigurasi dan tidak membu
 
 Hasil verifikasi lokal: `PostTest` 14 test/52 assertions, `ArtworkStorageTest` 8 test/31 assertions, dan full `composer test` 61 test/202 assertions lulus. Semua 9 migration berstatus `Ran`; Phase 5 tidak menambah migration.
 
+## Authentication Security Audit
+
+Authentication menggunakan Laravel Sanctum bearer token melalui `auth:sanctum`. Registration selalu menetapkan role `user` dari server dan hanya memproses field tervalidasi. Password di-hash oleh User cast/Hash sebelum disimpan; `password` dan `remember_token` tetap hidden, sedangkan personal access tokens tidak dikembalikan sebagai bagian dari user.
+
+Login dibatasi 5 request per menit berdasarkan IP dan email yang dinormalisasi. Registration dibatasi 5 request per menit berdasarkan IP. Limit response menggunakan JSON standar dengan status `429`. Pesan credential login tetap generik agar tidak memperkuat account enumeration.
+
+Token Sanctum baru memiliki expiry default 7 hari melalui `SANCTUM_TOKEN_EXPIRATION=10080`. Banyak perangkat tetap didukung karena login tidak mencabut token perangkat lain. Logout hanya mencabut current bearer token dan aman ketika authentication tidak memiliki token database yang dapat dihapus.
+
+API exception response dipusatkan untuk status 401, 403, 404, 422, 429, dan 500. Response 500 tidak menampilkan stack trace, SQL detail, credential, token, atau pesan exception internal. Role middleware dan policy tetap membaca role dari authenticated user/database; request client tidak dapat menaikkan role.
+
+Audit test tersedia pada `tests/Feature/AuthSecurityTest.php` dan mencakup registration, login, rate limiting, malformed input, logout, token expiry/revocation, role authorization, sensitive fields, serta error leakage.
+
 ## Phase 6 — Artwork Watermark
 
 Artwork diberi watermark server-side sebelum binary disimpan ke Supabase Storage untuk mengurangi risiko penggunaan ulang tanpa atribusi. Implementasi menggunakan native PHP GD yang tersedia pada environment project; tidak ada dependency image-processing tambahan.

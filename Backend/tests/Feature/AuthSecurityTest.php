@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class AuthSecurityTest extends TestCase
@@ -107,6 +109,58 @@ class AuthSecurityTest extends TestCase
         $this->withToken('invalid-token')->getJson('/api/user')->assertUnauthorized();
     }
 
+    public function test_login_with_malformed_input_returns_validation_error(): void
+    {
+        $this->postJson('/api/login', [
+            'email' => 'not-an-email',
+        ])->assertUnprocessable()
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['errors' => ['email', 'password']]);
+    }
+
+    public function test_login_is_rate_limited_with_consistent_json_response(): void
+    {
+        $user = User::factory()->create(['password' => 'password123']);
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/login', [
+                'email' => $user->email,
+                'password' => 'wrong-password',
+            ])->assertUnauthorized();
+        }
+
+        $this->postJson('/api/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ])->assertStatus(429)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Too many login attempts. Please try again later.',
+            ])
+            ->assertJsonStructure(['errors']);
+    }
+
+    public function test_registration_is_rate_limited_by_ip(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/register', [
+                'name' => 'Rate Limited '.$attempt,
+                'email' => 'rate-limited-'.$attempt.'@example.com',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+            ])->assertCreated();
+        }
+
+        $this->postJson('/api/register', [
+            'name' => 'Blocked Registration',
+            'email' => 'blocked-registration@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertStatus(429)
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['message', 'errors']);
+    }
+
     public function test_logout_revokes_current_token(): void
     {
         $user = User::factory()->create();
@@ -116,6 +170,38 @@ class AuthSecurityTest extends TestCase
 
         $this->app['auth']->forgetGuards();
         $this->withToken($token)->getJson('/api/user')->assertUnauthorized();
+    }
+
+    public function test_logout_without_a_current_bearer_token_is_safe(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/logout')
+            ->assertOk()
+            ->assertJsonPath('success', true);
+    }
+
+    public function test_sanctum_tokens_expire_after_configured_lifetime(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('expiry-test')->accessToken;
+        $token->forceFill(['expires_at' => Carbon::now()->subMinute()])->save();
+
+        $this->withToken($token->token)->getJson('/api/user')->assertUnauthorized();
+    }
+
+    public function test_api_server_errors_do_not_leak_exception_details(): void
+    {
+        Route::get('/api/test-auth-error', function () {
+            throw new \RuntimeException('internal-secret-detail');
+        });
+
+        $this->getJson('/api/test-auth-error')
+            ->assertStatus(500)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'An unexpected server error occurred.')
+            ->assertDontSee('internal-secret-detail');
     }
 
     public function test_role_endpoints_enforce_authorization(): void

@@ -181,6 +181,32 @@ Supabase bucket nyata belum diverifikasi dari environment ini. Automated tests m
 
 ---
 
+# Update Authentication Security Audit
+
+## Temuan dan Perbaikan
+
+- Menambahkan rate limiter Laravel-native untuk login dan registration.
+- Menetapkan expiry token Sanctum default 7 hari melalui `SANCTUM_TOKEN_EXPIRATION` tanpa mengubah `.env`.
+- Membungkus registration user dan token dalam transaction.
+- Membuat logout aman untuk authentication tanpa current bearer token.
+- Mengonsolidasikan API exception response agar 401/403/404/422/429/500 konsisten dan tidak membocorkan detail internal.
+- Merapikan `AuthController` dan mempertahankan role registration tetap `user`.
+- Menambahkan regression tests untuk throttling, expiry, logout, role security, dan error leakage.
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/AuthSecurityTest.php`: 16 test, 61 assertions lulus.
+- `composer test`: 76 test, 264 assertions lulus.
+- Migration database tidak berubah; seluruh 9 migration existing tetap digunakan.
+- Tidak ada perubahan frontend, migration, credential, `.env`, atau file untracked pengguna.
+
+## Risiko Tersisa
+
+- Token yang belum logout tetap valid sampai expiry 7 hari; mekanisme revoke-all-devices atau password reset belum termasuk audit ini.
+- Throttling berbasis cache memerlukan cache backend yang sesuai pada deployment multi-instance agar limit konsisten antar server.
+
+---
+
 # Update Phase 6 — Server-Side Artwork Watermark
 
 ## Perubahan
