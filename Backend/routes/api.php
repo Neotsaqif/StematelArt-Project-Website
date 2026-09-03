@@ -3,10 +3,16 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\FollowController;
+use App\Http\Controllers\Api\PostController;
 
-Route::post('/register', [AuthController::class, 'register']);
+Route::middleware('throttle:auth-register')
+    ->post('/register', [AuthController::class, 'register']);
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('throttle:auth-login')
+    ->post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return response()->json([
@@ -36,3 +42,20 @@ Route::middleware(['auth:sanctum', 'role:artist'])
 
 
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
+    Route::get('/settings', [SettingsController::class, 'show']);
+    Route::put('/settings', [SettingsController::class, 'update']);
+    Route::post('/users/{user}/follow', [FollowController::class, 'store']);
+    Route::delete('/users/{user}/follow', [FollowController::class, 'destroy']);
+    Route::get('/users/{user}/followers', [FollowController::class, 'followers']);
+    Route::get('/users/{user}/following', [FollowController::class, 'following']);
+    Route::get('/posts', [PostController::class, 'index']);
+    Route::get('/posts/{post}', [PostController::class, 'show']);
+    Route::post('/posts', [PostController::class, 'store']);
+    Route::put('/posts/{post}', [PostController::class, 'update']);
+    Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+});

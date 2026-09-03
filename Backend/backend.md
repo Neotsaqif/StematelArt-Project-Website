@@ -2271,3 +2271,226 @@ Authentication menggunakan Laravel Sanctum dan tabel personal_access_tokens. Rol
 
 Feature test tersedia di tests/Feature/AuthSecurityTest.php dan mencakup registration, role injection, validation, login, protected route, logout token revocation, role authorization, dan API 404.
 
+---
+
+# Phase 2 — Account Profile & Basic Settings
+
+## Database
+
+Phase 2 menambahkan migration baru tanpa mengubah migration users yang sudah ada:
+
+- users.bio — nullable text untuk bio profile.
+- users.avatar — nullable string untuk storage path/reference avatar.
+- user_settings — tabel one-to-one dengan users.
+- user_settings.theme — light atau dark, default light.
+- user_settings.notifications_enabled — boolean, default true.
+
+Avatar binary tidak disimpan di PostgreSQL. Database hanya menyimpan path/reference file.
+
+## Profile Endpoint
+
+Semua endpoint berikut membutuhkan Bearer token Sanctum:
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | /api/profile | Mengambil profile authenticated user |
+| PUT | /api/profile | Mengubah name dan bio sendiri |
+| POST | /api/profile/avatar | Mengunggah atau mengganti avatar |
+
+Update profile menerima name required string maksimum 255 karakter dan bio nullable string maksimum 5000 karakter. Email, role, password, id, token, email_verified_at, dan remember_token tidak dapat diubah melalui endpoint profile.
+
+## Avatar
+
+Avatar dikirim sebagai multipart field avatar. File yang diterima adalah jpg, jpeg, png, atau webp dengan ukuran maksimum 5 MB.
+
+Laravel Storage digunakan pada disk PROFILE_AVATAR_DISK dengan default public. Filename asli tidak digunakan sebagai path penyimpanan; Laravel membuat nama file baru.
+
+Saat replacement, file baru disimpan lebih dahulu. Reference database diperbarui setelah upload berhasil, kemudian file lama dihapus. Jika update database gagal, file baru dihapus sebagai rollback praktis.
+
+Supabase Storage belum dikonfigurasi pada repository ini. Implementasi saat ini menggunakan filesystem disk Laravel dan dapat diarahkan ke disk cloud setelah konfigurasi storage tersedia. Jangan memasukkan credential ke source code atau dokumentasi.
+
+## Settings Endpoint
+
+Semua endpoint settings membutuhkan Bearer token Sanctum:
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | /api/settings | Mengambil settings sendiri dan membuat default jika belum ada |
+| PUT | /api/settings | Mengubah settings sendiri secara parsial |
+
+Field yang tersedia adalah theme (light atau dark) dan notifications_enabled (boolean). Settings tidak menyimpan arbitrary JSON dan bukan mekanisme authorization.
+
+## Security dan Testing
+
+Profile dan settings selalu menggunakan authenticated user dari request. Tidak ada endpoint yang menerima user ID untuk mengubah account user lain. Field role pada payload diabaikan sehingga user tidak dapat melakukan role escalation.
+
+Response profile mengikuti hidden fields User sehingga password dan remember_token tidak dikembalikan. Personal access tokens tidak diload atau dikembalikan.
+
+Test Phase 2 tersedia pada tests/Feature/ProfileTest.php. Jalankan focused test dengan:
+
+php artisan test tests/Feature/ProfileTest.php
+
+Jalankan seluruh test backend dengan:
+
+composer test
+
+---
+
+# Phase 3 — Follow System
+
+## Database dan Relationship
+
+Migration baru membuat tabel follows dengan:
+
+- follower_id — user yang melakukan follow.
+- following_id — user yang diikuti.
+- unique constraint pada follower_id dan following_id.
+- foreign key ke users dengan cascade delete.
+
+Model Follow menyediakan relationship follower() dan following(). User menyediakan:
+
+- followers() — users yang mengikuti user tersebut.
+- following() — users yang diikuti user tersebut.
+
+Follower count tidak disimpan redundan.
+
+## Endpoint
+
+Semua endpoint membutuhkan Bearer token Sanctum:
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| POST | /api/users/{user}/follow | Follow target user |
+| DELETE | /api/users/{user}/follow | Unfollow target user |
+| GET | /api/users/{user}/followers | Daftar followers target |
+| GET | /api/users/{user}/following | Daftar following target |
+
+Authenticated user selalu digunakan sebagai follower. follower_id dari request body tidak diproses.
+
+Follow berhasil mengembalikan 201 dengan following true. Self-follow mengembalikan 422. Duplicate follow mengembalikan 409. Unfollow yang tidak memiliki relationship mengembalikan 404.
+
+## Pagination dan Security
+
+Followers dan following menggunakan pagination Eloquent dengan default 15 item per halaman. Parameter per_page menerima nilai 1 sampai 50.
+
+Route model binding menghasilkan response 404 standar jika target user tidak ditemukan. Response user tidak mengembalikan password, remember_token, atau personal access tokens.
+
+Semua role yang telah tersedia — user, artist, dan admin — dapat follow/unfollow. Tidak ada role restriction baru.
+
+## Testing
+
+Feature test Phase 3 tersedia pada tests/Feature/FollowTest.php dan mencakup authorization, self-follow, duplicate relationship, unfollow ownership, pagination, follower_id injection, route binding, sensitive fields, cascade delete, dan database unique constraint.
+
+Jalankan focused test dengan:
+
+php artisan test tests/Feature/FollowTest.php
+
+---
+
+# Phase 4 — Post Core
+
+## Database dan Relationship
+
+Migration baru membuat tabel posts dengan:
+
+- user_id — foreign key ke users dengan cascade delete.
+- title — judul artwork.
+- description — deskripsi nullable.
+- tags — tags nullable.
+- artwork_path — storage path/reference nullable.
+- timestamps.
+
+Binary artwork tidak disimpan di PostgreSQL. Upload dan storage artwork belum termasuk Phase 4 dan akan dikerjakan pada phase storage berikutnya.
+
+Model Post memiliki relationship user() ke User. User memiliki relationship posts() ke Post.
+
+## Endpoint
+
+Semua endpoint post membutuhkan Bearer token Sanctum:
+
+| Method | Endpoint | Authorization |
+|---|---|---|
+| GET | /api/posts | Semua authenticated user |
+| GET | /api/posts/{post} | Semua authenticated user |
+| POST | /api/posts | Artist atau admin |
+| PUT | /api/posts/{post} | Owner artist atau admin |
+| DELETE | /api/posts/{post} | Owner artist atau admin |
+
+Create selalu menggunakan authenticated user sebagai owner. user_id dari request body tidak diproses.
+
+## Validation dan Authorization
+
+Field create/update:
+
+- title: required, string, maksimum 255 karakter.
+- description: nullable string, maksimum 5000 karakter.
+- tags: nullable string, maksimum 1000 karakter.
+- artwork_path: nullable string, maksimum 2048 karakter.
+
+User biasa tidak dapat membuat, mengubah, atau menghapus post. Artist hanya dapat mengubah atau menghapus post miliknya sendiri. Admin dapat mengelola post user lain. Policy PostPolicy digunakan untuk aturan view, create, update, dan delete.
+
+Field id, user_id, role, dan author reassignment tidak dapat diubah melalui request.
+
+## Pagination dan Response
+
+GET /api/posts menggunakan pagination dengan default 15 item per halaman. Parameter per_page dibatasi dari 1 sampai 50. Author di-eager-load dengan field publik terbatas untuk menghindari N+1 query.
+
+Response post menyertakan post dan author tanpa password, remember_token, atau personal access tokens.
+
+## Testing
+
+Feature test Phase 4 tersedia pada tests/Feature/PostTest.php dan mencakup role authorization, ownership, admin access, validation, pagination, injection prevention, relationship, cascade delete, route model binding, dan sensitive fields.
+
+Jalankan focused test dengan:
+
+php artisan test tests/Feature/PostTest.php
+
+## Phase 5 — Supabase Storage dan Artwork Upload
+
+Artwork kini diunggah sebagai multipart file melalui endpoint post. Laravel memakai disk S3-compatible `supabase` yang diarahkan ke bucket `artworks`; bucket tidak dibuat otomatis oleh aplikasi. Adapter `league/flysystem-aws-s3-v3` sudah tersedia pada dependency project.
+
+Konfigurasi environment yang diperlukan (tanpa menyimpan credential di repository):
+
+- `ARTWORK_STORAGE_DISK=supabase`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_DEFAULT_REGION`
+- `AWS_BUCKET=artworks`
+- `AWS_ENDPOINT`
+- `AWS_USE_PATH_STYLE_ENDPOINT=true`
+
+Format storage key adalah `artworks/{user_id}/{uuid}.{extension}`. Nama file asli dan `artwork_path` dari client tidak digunakan.
+
+`POST /api/posts` membutuhkan field `title`, `description` opsional, `tags` opsional, dan `artwork` wajib. Artwork harus berupa `jpg`, `jpeg`, `png`, atau `webp`, maksimum 10 MB. Update post boleh tanpa file untuk metadata saja, atau dengan artwork baru untuk replacement. File baru diunggah sebelum reference database diperbarui; kegagalan database menghapus file baru dan mempertahankan reference lama.
+
+Response post berisi canonical `artwork_path` dan `artwork_url`. URL dibuat sebagai signed temporary URL selama 15 menit jika driver mendukung `temporaryUrl`; jika tidak, nilainya `null`, bukan URL publik palsu. Credential dan signature tidak pernah dikembalikan.
+
+Saat post dihapus, record database dihapus lebih dahulu lalu object pada path trusted post dihapus. Jika cleanup gagal, warning dicatat dan object orphan perlu dibersihkan secara manual. Tidak ada watermark pada Phase 5.
+
+Automated tests memakai `Storage::fake` pada disk terkonfigurasi dan tidak membutuhkan Supabase nyata. Verifikasi manual Supabase: isi environment lokal, jalankan `php artisan config:clear`, upload artwork melalui API, cek object pada bucket `artworks` dan `posts.artwork_path`, lalu uji replacement serta delete untuk memastikan object lama dibersihkan.
+
+Hasil verifikasi lokal: `PostTest` 14 test/52 assertions, `ArtworkStorageTest` 8 test/31 assertions, dan full `composer test` 61 test/202 assertions lulus. Semua 9 migration berstatus `Ran`; Phase 5 tidak menambah migration.
+
+## Authentication Security Audit
+
+Authentication menggunakan Laravel Sanctum bearer token melalui `auth:sanctum`. Registration selalu menetapkan role `user` dari server dan hanya memproses field tervalidasi. Password di-hash oleh User cast/Hash sebelum disimpan; `password` dan `remember_token` tetap hidden, sedangkan personal access tokens tidak dikembalikan sebagai bagian dari user.
+
+Login dibatasi 5 request per menit berdasarkan IP dan email yang dinormalisasi. Registration dibatasi 5 request per menit berdasarkan IP. Limit response menggunakan JSON standar dengan status `429`. Pesan credential login tetap generik agar tidak memperkuat account enumeration.
+
+Token Sanctum baru memiliki expiry default 7 hari melalui `SANCTUM_TOKEN_EXPIRATION=10080`. Banyak perangkat tetap didukung karena login tidak mencabut token perangkat lain. Logout hanya mencabut current bearer token dan aman ketika authentication tidak memiliki token database yang dapat dihapus.
+
+API exception response dipusatkan untuk status 401, 403, 404, 422, 429, dan 500. Response 500 tidak menampilkan stack trace, SQL detail, credential, token, atau pesan exception internal. Role middleware dan policy tetap membaca role dari authenticated user/database; request client tidak dapat menaikkan role.
+
+Audit test tersedia pada `tests/Feature/AuthSecurityTest.php` dan mencakup registration, login, rate limiting, malformed input, logout, token expiry/revocation, role authorization, sensitive fields, serta error leakage.
+
+## Phase 6 — Artwork Watermark
+
+Artwork diberi watermark server-side sebelum binary disimpan ke Supabase Storage untuk mengurangi risiko penggunaan ulang tanpa atribusi. Implementasi menggunakan native PHP GD yang tersedia pada environment project; tidak ada dependency image-processing tambahan.
+
+Watermark berisi teks `StematelART`, ditempatkan di bottom-right dengan margin kecil, shadow, dan warna semi-transparan. Dimensi artwork tidak diubah. JPG, PNG, dan WebP dipertahankan saat output; GD secara alami tidak membawa metadata EXIF ke output hasil encode.
+
+Flow upload sekarang menjadi: validasi upload → decode image → apply watermark → encode format asli → simpan generated storage key → simpan `posts.artwork_path`. File asli tidak pernah diunggah terlebih dahulu. Path tetap menggunakan format `artworks/{user_id}/{uuid}.{extension}`.
+
+Replacement memproses dan mengunggah artwork baru terlebih dahulu. Reference database diperbarui sebelum artwork lama dihapus. Jika decoding, watermark, upload, atau update database gagal, artwork lama tetap dipertahankan dan file baru dibersihkan jika sudah tersimpan. Delete post tetap menghapus final artwork berdasarkan path trusted dari record post.
+
+Automated watermark tests menggunakan `Storage::fake()` dan memverifikasi binary output berbeda dari input serta masih dapat dibaca sebagai image. Verifikasi manual Supabase dilakukan dengan upload melalui Postman, membuka temporary URL, memastikan teks `StematelART` terlihat, lalu menguji replacement dan deletion.
