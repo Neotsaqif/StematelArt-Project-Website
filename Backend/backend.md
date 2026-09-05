@@ -7,8 +7,9 @@ StematelART adalah platform komunitas seni untuk anak-anak StematelArt, dengan k
 Backend StematelART dibangun dengan **Laravel** dan berperan sebagai **REST API** yang melayani kebutuhan frontend. Backend bertanggung jawab untuk:
 
 - Menyediakan REST API untuk frontend.
-- Mengelola autentikasi user (saat ini baru mencakup registrasi).
-- Menyimpan dan mengelola data user.
+- Mengelola autentikasi user (registrasi, login, logout, sesi token, role authorization).
+- Menyimpan dan mengelola data user (profil, avatar, settings, follow/following).
+- Mengelola content (post/artwork, upload storage, watermark).
 - Menjadi lapisan bisnis logic dan validasi sebelum data disimpan ke database.
 - Terhubung ke database **Supabase/PostgreSQL**.
 
@@ -52,7 +53,10 @@ Frontend
    v
 Laravel REST API
    |
-   +---- AuthController -> Registration API (saat ini)
+   +---- AuthController  (register / login / logout / token)
+   +---- ProfileController / SettingsController
+   +---- FollowController
+   +---- PostController (post + artwork upload + watermark)
    |
    +---- Eloquent ORM
    |
@@ -64,7 +68,7 @@ Alur komunikasi saat ini:
 
 1. Frontend (atau client API seperti Postman) mengirim request HTTP ke endpoint Laravel.
 2. Laravel meneruskan request ke route yang terdaftar di `routes/api.php`.
-3. Route memanggil controller yang sesuai (saat ini hanya `AuthController@register`).
+3. Route memanggil controller yang sesuai (AuthController, ProfileController, SettingsController, FollowController, atau PostController).
 4. Controller melakukan validasi terhadap input request.
 5. Jika valid, data diproses (misalnya password di-hash) lalu disimpan ke database melalui Eloquent Model (`User`).
 6. Database yang digunakan adalah Supabase PostgreSQL.
@@ -621,17 +625,51 @@ Lokasi route API: `Backend/routes/api.php`
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\FollowController;
+use App\Http\Controllers\Api\PostController;
 
-Route::post('/register', [AuthController::class, 'register']);
+Route::middleware('throttle:auth-register')->post('/register', [AuthController::class, 'register']);
+Route::middleware('throttle:auth-login')->post('/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->get('/user', ...);
+Route::middleware(['auth:sanctum', 'role:admin'])->get('/admin/test', ...);
+Route::middleware(['auth:sanctum', 'role:artist'])->get('/artist/test', ...);
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    // profile, settings, follow, posts ...
+});
 ```
+
+Karena route ada di `routes/api.php`, semua endpoint API otomatis memiliki prefix `/api`.
 
 ### Endpoint aktif
 
 | Method | Endpoint | Controller@Method | Status |
 |---|---|---|---|
 | POST | `/api/register` | `AuthController@register` | ✓ Sudah tersedia |
+| POST | `/api/login` | `AuthController@login` | ✓ Sudah tersedia |
+| POST | `/api/logout` | `AuthController@logout` | ✓ Sudah tersedia |
+| GET | `/api/user` | closure (auth:sanctum) | ✓ Sudah tersedia |
+| GET | `/api/admin/test` | closure (role:admin) | ✓ Sudah tersedia |
+| GET | `/api/artist/test` | closure (role:artist) | ✓ Sudah tersedia |
+| GET | `/api/profile` | `ProfileController@show` | ✓ Sudah tersedia |
+| PUT | `/api/profile` | `ProfileController@update` | ✓ Sudah tersedia |
+| POST | `/api/profile/avatar` | `ProfileController@updateAvatar` | ✓ Sudah tersedia |
+| GET | `/api/settings` | `SettingsController@show` | ✓ Sudah tersedia |
+| PUT | `/api/settings` | `SettingsController@update` | ✓ Sudah tersedia |
+| POST | `/api/users/{user}/follow` | `FollowController@store` | ✓ Sudah tersedia |
+| DELETE | `/api/users/{user}/follow` | `FollowController@destroy` | ✓ Sudah tersedia |
+| GET | `/api/users/{user}/followers` | `FollowController@followers` | ✓ Sudah tersedia |
+| GET | `/api/users/{user}/following` | `FollowController@following` | ✓ Sudah tersedia |
+| GET | `/api/posts` | `PostController@index` | ✓ Sudah tersedia |
+| GET | `/api/posts/{post}` | `PostController@show` | ✓ Sudah tersedia |
+| POST | `/api/posts` | `PostController@store` | ✓ Sudah tersedia |
+| PUT | `/api/posts/{post}` | `PostController@update` | ✓ Sudah tersedia |
+| DELETE | `/api/posts/{post}` | `PostController@destroy` | ✓ Sudah tersedia |
 
-Karena route ada di `routes/api.php`, semua endpoint API otomatis memiliki prefix `/api`. Jadi endpoint lengkapnya adalah `POST /api/register`.
+Catatan: `register` dan `login` menggunakan `throttle:` middleware (rate limiting). Semua route selain register/login berada di bawah `auth:sanctum` (perlu bearer token).
 
 ### Konvensi penamaan endpoint untuk development berikutnya
 
@@ -1263,7 +1301,7 @@ Pedoman keamanan. Beberapa poin sudah diterapkan, beberapa adalah rekomendasi un
 
 # 24. Current Backend Status
 
-Status aktual backend saat ini berdasarkan source code.
+Status aktual backend saat ini berdasarkan source code (terakhir disinkronkan 2026-09-05).
 
 ### Sudah selesai
 
@@ -1271,33 +1309,45 @@ Status aktual backend saat ini berdasarkan source code.
 - [✓] Supabase connection
 - [✓] API structure (prefix `/api`)
 - [✓] Sanctum (package + migration + HasApiTokens)
-- [✓] `users` table (migration + role)
+- [✓] `users` table (migration + role + profil fields bio/avatar)
 - [✓] `personal_access_tokens` table
-- [✓] User model (+ trait HasApiTokens, HasFactory, Notifiable)
+- [✓] `user_settings` table
+- [✓] `follows` table
+- [✓] `posts` table
+- [✓] User model (+ trait HasApiTokens, HasFactory, Notifiable + relasi)
+- [✓] Model Follow, Post, UserSetting + Policy PostPolicy
 - [✓] Registration API (`POST /api/register`)
-- [✓] Validation (name, email, password)
-- [✓] Registration API testing (Postman/HTTP)
+- [✓] Login API (`POST /api/login`)
+- [✓] Logout API (`POST /api/logout`, revoke token)
+- [✓] Get authenticated user (`GET /api/user`)
+- [✓] Middleware `auth:sanctum` untuk protected route
+- [✓] Role middleware (user/artist/admin authorization) + role demo endpoints
+- [✓] Artist authorization
+- [✓] Admin authorization
+- [✓] Response error JSON terpusat (401/403/404/422/429/500)
+- [✓] Rate limiting login & registration (`throttle:auth-login`, `throttle:auth-register`)
+- [✓] Profile API (get, update, avatar upload)
+- [✓] Settings API (get, update)
+- [✓] Follow API (follow, unfollow, followers, following + pagination)
+- [✓] Post API (CRUD + ownership authorization)
+- [✓] Artwork upload & storage (Supabase via `ArtworkStorageService`, `ARTWORK_STORAGE_DISK`)
+- [✓] Watermark server-side (native PHP GD via `ArtworkWatermarkService`)
+- [✓] Setup/dependency: cache, jobs, throttling
+- [✓] Test: AuthSecurity, Profile, Follow, Post, ArtworkStorage, ArtworkWatermark (~76 test, 264 assertions)
+- [✓] `.env.example` diperbarui (SANCTUM_TOKEN_EXPIRATION, PROFILE_AVATAR_DISK, ARTWORK_STORAGE_DISK)
 
 ### Belum diimplementasikan
 
-- [ ] Login API
-- [ ] Logout API
-- [ ] Get authenticated user (`/api/me`)
-- [ ] Role middleware (user/artist/admin authorization)
-- [ ] Artist authorization
-- [ ] Admin authorization
-- [ ] Artwork API
-- [ ] Like API
+- [ ] Like / Unlike API
 - [ ] Comment API
-- [ ] Saved/liked artwork API
-- [ ] Discovery / ranking
+- [ ] Save / Unsave (collections) API
+- [ ] Share / copy post URL API
+- [ ] Feed Discovery / ranking API
+- [ ] Search / filter / pagination global API
 - [ ] Commission API
 - [ ] Contest API
 - [ ] Notification API
-- [ ] Admin management API
-- [ ] Protected route dengan `auth:sanctum`
-- [ ] Feature/unit test untuk AuthController
-- [ ] Update `.env.example` untuk konfigurasi Supabase/PostgreSQL
+- [ ] Admin management API (users, artists, posts, contests, moderation)
 
 ---
 

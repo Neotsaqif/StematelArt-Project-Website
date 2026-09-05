@@ -2,7 +2,7 @@
 
 Frontend modular yang sudah dipisahkan berdasarkan komponen dan halaman dari `frontend-legacy`.
 
-> **Status (2026-09-03):** prototipe UI beresolusi tinggi. Sebagian besar data adalah **mock** (`src/data/mockData.ts`) dengan state lokal React. Hanya alur **login/signup** yang terhubung ke backend Laravel via `src/services/api.ts`. Lihat `docs/AUDIT.md` untuk audit lengkap.
+> **Status (2026-09-05):** prototipe UI beresolusi tinggi. Sebagian besar data adalah **mock** (`src/data/mockData.ts`) dengan state lokal React. Hanya alur **login/signup** yang terhubung ke backend Laravel via `src/services/api.ts`. Backend sendiri sudah berkembang (auth, profil/settings, follow, posts/artwork + watermark/storage) namun frontend belum di-wire ke endpoint tersebut — itu masih pekerjaan de-mocking berikutnya. Lihat `docs/AUDIT.md` untuk audit lengkap dan status terkini.
 
 ## Tech Stack
 
