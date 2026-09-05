@@ -4,6 +4,34 @@
 >
 > Stack audited: Laravel 12 REST API (`Backend/`) + React 18 / TypeScript / Vite / Tailwind SPA (`frontend/`). `frontend-legacy/` treated as reference only.
 
+> **⚠️ Status update (2026-09-05):** The audit below is a **historical snapshot** taken at HEAD `6c0c68e`. Since then the backend has moved well past "authentication only" and now also includes **profiles & basic settings, the follow system, the posts/artwork core, Supabase artwork storage, and server-side watermarking** (scope of the `fitur-account-post-social` work, merged via #16, plus the `audit-auth-security` hardening merged via #19). The frontend remains a **high-fidelity mock prototype** that only wires login/signup to the backend. See the [current status](#post-audit-status-update-2026-09-05) section below, which supersedes the outdated claims in the original snapshot.
+
+## Post-Audit Status Update (2026-09-05)
+
+The original audit snapshot described the backend as **authentication-only**. That is no longer accurate. Current project state:
+
+### Backend — implemented since the snapshot
+- **Full token auth** (register / login / logout / `GET /user`) with **rate limiting** on login & registration (`throttle:auth-login`, `throttle:auth-register`) and centralized JSON error handling for 401 / 403 / 404 / 422 / 429 / 500.
+- **Role middleware** (`role:user|artist|admin`) with demo endpoints; registration hard-codes `role => 'user'`.
+- **Profile & settings** endpoints: get/update profile, avatar upload, theme & notification settings.
+- **Follow system**: follow / unfollow / followers / following (paginated).
+- **Posts / artwork** CRUD with ownership authorization (`PostPolicy`).
+- **Artwork storage** on Supabase via `ArtworkStorageService` (`ARTWORK_STORAGE_DISK`) and **server-side watermarking** via native PHP GD (`ArtworkWatermarkService`).
+- New tables: `users` profile fields (bio/avatar), `user_settings`, `follows`, `posts`.
+- Backend test suite grown to ~76 tests / ~264 assertions (`AuthSecurityTest`, `ProfileTest`, `FollowTest`, `PostTest`, `ArtworkStorageTest`, `ArtworkWatermarkTest`).
+
+### Frontend — unchanged from the snapshot (partial wiring)
+- Still a **mock-data prototype**; only `LoginPage.tsx` / `SignupPage.tsx` call the real backend via `services/api.ts`. No authenticated fetch helper, no logout API call, no token attached to requests yet.
+- Remaining de-mocking is future work (profile, posts, discovery, liking, comments, save/share, ranking, contests, notifications, admin).
+
+### Remaining open items (still true)
+- Committed `APP_KEY` in `docker-compose.yml` and `APP_DEBUG: "true"` in the compose environment.
+- Token kept in `localStorage` (XSS-exposed); no httpOnly-cookie session.
+- No frontend test framework (no vitest/jest/playwright).
+- ESLint config still missing (`npm run lint` doesn't run).
+
+---
+
 ## 1. Progress Overview
 
 **Overall maturity: Early-stage, mid-prototype. High-fidelity UI, minimal backend.**

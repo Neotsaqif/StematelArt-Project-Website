@@ -5,15 +5,17 @@
 StematelArt is an art community platform for the MVP. Users and artists can share, discover, like, comment on, save, and rank artworks. Users can join contests and receive notifications. Admins can manage users, artists, posts, and contests, and also moderate content. Commission is explicitly excluded from the MVP scope.
 
 The frontend is currently a high-fidelity mock prototype. The backend currently provides authentication only. This plan turns the full MVP scope into dependency-ordered, feature-sized phases. Each phase delivers a complete user-facing feature end-to-end.
+
+> **Status (2026-09-05):** The backend has already implemented **Phases 1–6** server-side (auth + rate limiting, profiles & settings, follow system, posts core, Supabase artwork storage, server-side watermarking) — `docs/AUDIT.md` and `Backend/update.md` track this. The **frontend** is still the mock prototype wired only for login/signup, so the remaining work is largely the frontend unwiring/de-mocking per phase (and the backend phases after 6 listed below).
 ##2. Assumptions & Open Questions
 
 - Assumption: Supabase Storage is the production asset store for artwork and avatars. Dev and test may use local disk. Laravel Flysystem config keeps this swappable.
-- Assumption: No domain schema exists yet. Only users, token, cache, and jobs tables exist. Each phase introduces its own migrations. Tests run on in-memory SQLite. Dev uses Postgres.
+- Assumption: No domain schema exists yet. Only users, token, cache, and jobs tables exist. Each phase introduces its own migrations. Tests run on in-memory SQLite. Dev uses Postgres. *(Update: profile-fields, `user_settings`, `follows`, and `posts` tables now exist — Phases 1–6 backend done.)*
 - Assumption: Roles are user, artist, and admin. They already exist on the users table. The role middleware enforces them. Sanctum bearer-token authentication is already in place for register, login, logout, and user.
 - Assumption: Notifications are in-app only for the MVP. No email or push.
 - Assumption: The existing frontend will be unwired from mock data feature-by-feature. Only in the phase that delivers the matching endpoint.
 - Assumption: frontend-legacy is treated as reference only.
-- Open question: watermarking approach is undecided. Client-side before upload or server-side. Flagged inline in Phase 3.
+- Open question: watermarking approach is undecided. Client-side before upload or server-side. Flagged inline in Phase 3. *(Update: resolved — server-side watermarking implemented via native PHP GD in `ArtworkWatermarkService`.)*
 
 ##3. Tech Stack / Architecture
 
