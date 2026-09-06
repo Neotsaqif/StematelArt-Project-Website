@@ -4,7 +4,7 @@
 >
 > Stack audited: Laravel 12 REST API (`Backend/`) + React 18 / TypeScript / Vite / Tailwind SPA (`frontend/`). `frontend-legacy/` treated as reference only.
 
-> **⚠️ Status update (2026-09-05):** The audit below is a **historical snapshot** taken at HEAD `6c0c68e`. Since then the backend has moved well past "authentication only" and now also includes **profiles & basic settings, the follow system, the posts/artwork core, Supabase artwork storage, and server-side watermarking** (scope of the `fitur-account-post-social` work, merged via #16, plus the `audit-auth-security` hardening merged via #19). The frontend remains a **high-fidelity mock prototype** that only wires login/signup to the backend. See the [current status](#post-audit-status-update-2026-09-05) section below, which supersedes the outdated claims in the original snapshot.
+> **⚠️ Status update (2026-09-05):** The audit below is a **historical snapshot** taken at HEAD `6c0c68e`. Since then the backend has moved well past "authentication only" and now also includes **profiles & basic settings, the follow system, the posts/artwork core, and Supabase artwork storage** (scope of the `fitur-account-post-social` work, merged via #16, plus the `audit-auth-security` hardening merged via #19). Watermarking is handled **client-side** (HTML5 canvas, applied before upload). The frontend remains a **high-fidelity mock prototype** that only wires login/signup to the backend. See the [current status](#post-audit-status-update-2026-09-05) section below, which supersedes the outdated claims in the original snapshot.
 
 ## Post-Audit Status Update (2026-09-05)
 
@@ -16,7 +16,7 @@ The original audit snapshot described the backend as **authentication-only**. Th
 - **Profile & settings** endpoints: get/update profile, avatar upload, theme & notification settings.
 - **Follow system**: follow / unfollow / followers / following (paginated).
 - **Posts / artwork** CRUD with ownership authorization (`PostPolicy`).
-- **Artwork storage** on Supabase via `ArtworkStorageService` (`ARTWORK_STORAGE_DISK`) and **server-side watermarking** via native PHP GD (`ArtworkWatermarkService`).
+- **Artwork storage** on Supabase via `ArtworkStorageService` (`ARTWORK_STORAGE_DISK`); watermarking is done **client-side** (HTML5 canvas, applied before upload).
 - New tables: `users` profile fields (bio/avatar), `user_settings`, `follows`, `posts`.
 - Backend test suite grown to ~76 tests / ~264 assertions (`AuthSecurityTest`, `ProfileTest`, `FollowTest`, `PostTest`, `ArtworkStorageTest`, `ArtworkWatermarkTest`).
 
