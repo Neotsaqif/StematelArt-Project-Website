@@ -2,7 +2,7 @@
 
 ## Metadata
 - Feature: Authentication & Session(Phase 1.
-- Source: docs/IMPLEMENTATION_PLAN.md — Phase 1
+- Source: docs/PRD.md — Phase 1
 - Status: Completed with known issues
 - Target: End-to-end auth client flow
 - Audit: [docs/AUDIT_AUTH_PHASE1.md](../../AUDIT_AUTH_PHASE1.md)
