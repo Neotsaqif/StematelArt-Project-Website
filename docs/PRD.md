@@ -1,6 +1,6 @@
 # StematelArt — Product Requirements Document (PRD)
 
-**Version:** 1.1
+**Version:** 1.2
 **Status:** Draft — single consolidated reference (the product brief and 12-phase implementation plan have been folded into this document)
 **Last Updated:** 2026-09-06
 
@@ -14,8 +14,8 @@ This PRD defines the full scope, requirements, and delivery plan for **StematelA
 ### 1.2 Background
 StematelArt currently exists as:
 - A **high-fidelity frontend prototype** (`frontend-legacy/Artvault.jsx`) using mock data and local state.
-- A **backend** (Laravel 12 + Sanctum) that has already implemented Phases 1–6 server-side (auth, profiles/settings, follow system, posts core, Supabase artwork storage) — watermarking is handled **client-side**.
-- The new frontend (React 18 + TypeScript) is currently wired only for login/signup; the remaining work is largely de-mocking the UI feature-by-feature against the existing/([soon-to-exist) backend endpoints.
+- A **backend** (Laravel 12 + Sanctum) that has already implemented Phases 1–3 server-side (auth, profiles/settings, follow system, posts core, Supabase artwork storage, pagination) — watermarking is handled **client-side**.
+- The new frontend (React 18 + TypeScript) currently implements the **Phase 1 auth/session flow** (register, login, logout, token storage, session hydration on reload); the remaining work is largely de-mocking the UI feature-by-feature against the existing/soon-to-exist backend endpoints.
 
 ### 1.3 Definitions
 | Term | Meaning |
@@ -90,7 +90,7 @@ stematelart/
 ### 3.2 Architectural Assumptions
 - Supabase Storage is the production asset store for artwork and avatars; dev/test may use local disk (swappable via Flysystem).
 - Roles (`user`, `artist`, `admin`) already exist on the `users` table and are enforced via role middleware.
-- Sanctum bearer-token auth is already implemented for register, login, logout, and the authenticated user endpoint.
+- Sanctum bearer-token auth is implemented for register, login, logout, and the authenticated user endpoint; login and registration are rate-limited (`throttle:auth-login`, `throttle:auth-register`), and the frontend stores the token in memory with a `sessionStorage` mirror, hydrating the session on reload.
 - Notifications are in-app only for MVP — no email/push.
 - The frontend is de-mocked feature-by-feature, only once the matching backend endpoint exists.
 - `frontend-legacy` is a design reference only, not shipped code.
@@ -105,16 +105,17 @@ Each feature below carries a **status tag**:
 - **[Proto]** — UI exists in the legacy prototype with mock data.
 - **[Planned]** — specified, not yet built.
 - **[BE done]** — backend implemented; frontend integration pending.
+- **[FE done]** — frontend implemented and wired to the live backend.
 - **[Out of MVP]** — excluded from this release.
 
 ### 4.1 Account
 | Feature | Status |
 |---|---|
-| Registration | Proto / BE done |
-| Login | Proto / BE done |
-| Logout (token revocation) | BE done / Proto UI |
-| Authentication (Sanctum bearer token) | BE done / Proto UI |
-| Authorization / Role (user, artist, admin; role middleware) | BE done / Proto UI |
+| Registration | BE done / FE done |
+| Login | BE done / FE done |
+| Logout (token revocation) | BE done / FE done |
+| Authentication (Sanctum bearer token) | BE done / FE done |
+| Authorization / Role (user, artist, admin; role middleware) | BE done / FE done |
 | Profile (view) | Proto / BE done |
 | Edit Profile | Proto / BE done |
 | Avatar upload | Proto / BE done |
@@ -321,7 +322,7 @@ order_status_history  order_id, from_status, to_status, actor_id, changed_at
 
 | Category | Requirement |
 |---|---|
-| **Security** | Sanctum bearer tokens; secure token storage (harden beyond current localStorage use); login rate limiting; no committed secrets/APP_KEY; ownership checks (policies) on all mutating endpoints. |
+| **Security** | Sanctum bearer tokens; login & registration rate-limiting implemented; token stored in memory with a `sessionStorage` mirror (moved out of plain `localStorage`, though still not an httpOnly cookie); no committed secrets / `APP_KEY`; ownership checks (policies) on all mutating endpoints. |
 | **Validation** | Every backend feature requires input validation, permission checks, and automated tests. |
 | **Performance** | Basic performance testing before launch; paginated/infinite-scroll feeds to avoid large payloads. |
 | **Availability** | Production deployment over HTTPS on a stable domain. |
@@ -345,11 +346,11 @@ Role enforcement is handled by `RoleMiddleware`; ownership enforcement (e.g., "o
 
 ## 7. Delivery Plan — Phased Roadmap
 
-The MVP is delivered as **12 dependency-ordered phases**, each shipping a complete end-to-end user-facing feature. As of **2026-09-05**, Phases 1–6 are done on the backend; frontend integration (de-mocking) is the primary remaining work for those phases.
+The MVP is delivered as **12 dependency-ordered phases**, each shipping a complete end-to-end user-facing feature. As of **2026-09-06**, Phases 1–3 are done on the backend and the **Phase 1 frontend auth/session flow is implemented** (end-to-end); Social (4), Discovery (5), and Ranking (6) are not yet started. De-mocking the remaining phases is the primary remaining work.
 
 | Phase | Name | Goal | Status |
 |---|---|---|---|
-| 1 | Authentication & Session | Register, log in, log out, stay authenticated | Backend done; frontend hardening pending |
+| 1 | Authentication & Session | Register, log in, log out, stay authenticated | Backend done; frontend auth/session flow implemented |
 | 2 | Profiles & Following | Edit profile, upload avatar, follow/unfollow with persisted counts | Backend done; frontend wiring pending |
 | 3 | Posts & Artwork Upload | Upload, validate, and watermark artwork; CRUD with ownership checks | Backend done; frontend wiring pending |
 | 4 | Social Interaction | Like, comment (delete own), save, share | Not yet started |
@@ -400,7 +401,8 @@ Each phase below carries the **Goal → Scope → Done-when** detail folded in f
 
 #### Phase 1 — Authentication & Session
 **Goal:** Users can register, log in, log out, and stay authenticated.
-**Scope:** Finalize existing Sanctum auth into a reliable client flow; add a shared authenticated fetch helper; keep the token safer; make logout revoke the token server-side; fix broken auth items from the audit.
+**Scope:** Finalize existing Sanctum auth into a reliable client flow; add a shared authenticated fetch helper; keep the token safer (moved from plain `localStorage` to an in-memory variable with a `sessionStorage` mirror); make logout revoke the token server-side; hydrate the session on reload and fix 401-on-refresh bugs.
+**Status:** Implemented (Phase 1 complete). Google/Discord sign-in buttons remain mock-only until OAuth is added.
 **Done when:** A user can sign up, log in, reach protected views, and log out; refresh keeps the session.
 
 #### Phase 2 — Profiles & Following
@@ -466,7 +468,7 @@ Each phase below carries the **Goal → Scope → Done-when** detail folded in f
 |---|---|
 | No domain migrations existed initially; every phase adds schema | Add migrations per phase with test coverage |
 | Client-side watermarking can be tampered with / removed | Watermark is applied on upload as a UX safeguard, not a security boundary; consider server-side addition as a post-launch hardening follow-up |
-| Known auth security gaps (committed `APP_KEY`, token in localStorage, no login rate limiting) | Addressed as audit quick wins in Phase 11 |
+| Known auth security gaps — **resolved:** login/registration rate limiting added; token moved out of plain `localStorage` into an in-memory + `sessionStorage` mirror. **Remaining:** committed `APP_KEY` and `APP_DEBUG` in `docker-compose.yml`; token still not an httpOnly cookie | Resolved items were delivered as part of the auth security/hardening work and Phase 1; remaining items are queued for Phase 11 hardening |
 | Large legacy mock frontend makes de-mocking substantial | Replace mock data feature-by-feature, one phase at a time |
 | Ownership/role permissions span many endpoints | Enforce via role middleware + per-phase ownership policy tests |
 | Scope creep into email/push notifications | Explicitly restrict MVP notifications to in-app only |
