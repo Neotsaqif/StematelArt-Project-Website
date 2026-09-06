@@ -27,7 +27,7 @@ export function LoginPage() {
     setBusy(false);
 
     if (res.success) {
-      app.signIn();
+      app.signIn(res.data?.user);
       app.navigate("discovery");
       toast.success("Berhasil masuk", { description: "Selamat datang kembali" });
     } else {

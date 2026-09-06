@@ -125,6 +125,8 @@ export interface AppOverlay {
   spec?: ConfirmSpec;
 }
 
+import { AuthUser } from '../services/api';
+
 export interface AppContextType {
   screen: string;
   params: any;
@@ -134,8 +136,9 @@ export interface AppContextType {
   followed: Set<string>;
   collections: Collection[];
   loggedIn: boolean;
+  currentUser: AuthUser | null;
   navigate: (screen: string, params?: any) => void;
-  signIn: () => void;
+  signIn: (user?: AuthUser) => void;
   back: () => void;
   requireAuth: (fn: () => void) => void;
   retry: () => void;
@@ -150,7 +153,7 @@ export interface AppContextType {
   toggleFollow: (artistId: string) => void;
   saveTo: (collection: Collection, artwork: Artwork) => void;
   createCollection: (name: string, artwork: Artwork) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   confirm: (spec: ConfirmSpec) => void;
   openNotifs: (rect: DOMRect | null) => void;
   openAvatarMenu: (rect: DOMRect | null) => void;

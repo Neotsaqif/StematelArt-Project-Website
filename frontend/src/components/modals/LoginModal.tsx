@@ -3,8 +3,9 @@ import { useApp } from '../../context/AppContext';
 import { Modal } from './ModalShell';
 import { AuthField, HelpLine, EyeToggle, OrDivider, SocialButtons, PillButton } from '../../pages/auth/AuthLayout';
 import { toast } from '../../utils/helpers';
+import { loginUser, AuthUser } from '../../services/api';
 
-export function LoginModal({ onClose, onDone }) {
+export function LoginModal({ onClose, onDone }: { onClose: () => void; onDone: (user: AuthUser) => void }) {
   const app = useApp();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -12,15 +13,19 @@ export function LoginModal({ onClose, onDone }) {
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
     if (busy) return;
     setFail(false);
     setBusy(true);
-    setTimeout(() => {
-      setBusy(false);
-      if (email.trim().length > 2 && pw.length >= 6) onDone();
-      else { setFail(true); toast.error("Gagal masuk", { description: "Email atau kata sandi salah" }); }
-    }, 900);
+
+    const res = await loginUser({ email: email.trim(), password: pw });
+    setBusy(false);
+
+    if (res.success && res.data?.user) onDone(res.data.user);
+    else {
+      setFail(true);
+      toast.error("Gagal masuk", { description: res.message });
+    }
   };
 
   const leave = (screen) => { onClose(); app.navigate(screen); };

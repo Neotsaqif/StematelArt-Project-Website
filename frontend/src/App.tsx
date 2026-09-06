@@ -8,6 +8,7 @@ import { AppCtx } from './context/AppContext';
 import { COLLECTION_SEED, ARTWORKS, ORDERS, AUTH_SCREENS, EXPORT_FRAMES } from './data/mockData';
 import { toast } from './utils/helpers';
 import { Artwork, Order, Collection, Notification, Comment, Profile, ConfirmSpec, AppOverlay, AppContextType } from './types';
+import { AuthUser, clearToken, fetchMe, getToken, logoutUser } from './services/api';
 
 // UI & Layout Components
 import { Toaster } from './components/ui/Toast';
@@ -183,12 +184,37 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
   const [saved, setSaved] = useState<Set<number>>(new Set());
   const [followed, setFollowed] = useState<Set<string>>(new Set());
   const [collections, setCollections] = useState<Collection[]>(COLLECTION_SEED);
-  const [loggedIn, setLoggedIn] = useState(props.auth0 !== undefined ? props.auth0 : DEEP_LINK.auth);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [loggedIn, setLoggedIn] = useState(isStatic ? Boolean(props.auth0) : false);
   const [viewState, setViewState] = useState("normal");
   const [annotate, setAnnotate] = useState(false);
   const [overlay, setOverlay] = useState<AppOverlay | null>(null);
   const pending = useRef<(() => void) | null>(null);
   const restore = useRef<number | null>(null);
+
+  useEffect(() => {
+    const token = getToken();
+
+    if (isStatic || !token) return;
+
+    let active = true;
+    fetchMe().then(user => {
+      if (!active) return;
+
+      if (user) {
+        setCurrentUser(user);
+        setLoggedIn(true);
+        return;
+      }
+
+      setCurrentUser(null);
+      setLoggedIn(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isStatic, props.auth0]);
 
   // Match URL path to screen/params for backwards compatibility context
   const matchRouteToScreen = useCallback((pathname: string, search: string) => {
@@ -332,9 +358,12 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
   const app: AppContextType = {
     screen,
     params,
-    viewState, liked, saved, followed, collections, loggedIn,
+    viewState, liked, saved, followed, collections, loggedIn, currentUser,
     navigate: (s, p) => push(s, p),
-    signIn: () => setLoggedIn(true),
+    signIn: (user) => {
+      setCurrentUser(user || null);
+      setLoggedIn(true);
+    },
     back, requireAuth,
     retry: () => setViewState("normal"),
     openArtwork: (a) => push("artwork", { artwork: a }),
@@ -370,7 +399,16 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
       setSaved(s => new Set(s).add(a.id));
       toast.success("Koleksi “" + name + "” dibuat", { description: a.title + " disimpan" });
     },
-    logout: () => { setLoggedIn(false); toast("Kamu telah keluar"); },
+    logout: async () => {
+      try {
+        await logoutUser();
+      } finally {
+        clearToken();
+        setCurrentUser(null);
+        setLoggedIn(false);
+        toast("Kamu telah keluar");
+      }
+    },
     confirm: (spec) => setOverlay({ kind: "confirm", spec }),
     openNotifs: (rect) => setOverlay({ kind: "notifs", rect }),
     openAvatarMenu: (rect) => setOverlay({ kind: "avatar", rect }),
@@ -383,6 +421,10 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
   };
 
   const closeOverlay = () => setOverlay(null);
+  const closeLoginOverlay = () => {
+    pending.current = null;
+    closeOverlay();
+  };
   const chrome = !props.exportMode;
 
   if (!props.screen0 && DEEP_LINK.screen === "all") return <ExportAll />;
@@ -448,7 +490,7 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
 
         <MobileNav />
 
-        {overlay && overlay.kind === "login"        && <LoginModal onClose={closeOverlay} onDone={() => { setLoggedIn(true); closeOverlay(); const fn = pending.current; pending.current = null; toast.success("Berhasil masuk", { description: fn ? "Tindakanmu dilanjutkan" : undefined }); if (fn) setTimeout(fn, 60); }} />}
+        {overlay && overlay.kind === "login"        && <LoginModal onClose={closeLoginOverlay} onDone={(user) => { app.signIn(user); closeOverlay(); const fn = pending.current; pending.current = null; toast.success("Berhasil masuk", { description: fn ? "Tindakanmu dilanjutkan" : undefined }); if (fn) setTimeout(fn, 60); }} />}
         {overlay && overlay.kind === "notifs"       && <NotifDropdown rect={overlay.rect!} onClose={closeOverlay} />}
         {overlay && overlay.kind === "avatar"       && <AvatarMenu rect={overlay.rect!} onClose={closeOverlay} />}
         {overlay && overlay.kind === "collections"  && <CollectionsPopover rect={overlay.rect!} artwork={overlay.artwork!} onClose={closeOverlay} />}
