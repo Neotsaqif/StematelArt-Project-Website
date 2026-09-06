@@ -24,12 +24,12 @@ The frontend is currently a high-fidelity mock prototype. The backend currently 
 - Database: PostgreSQL. Supabase in production. Local Postgres via Docker. In-memory SQLite for tests.
 - Storage: object storage for uploads via Flysystem. Supabase Storage in prod. Local disk in dev.
 - Deployment: Docker Compose. nginx serves the frontend build and proxies /api to the backend.
-- Auth: Laravel Sanctum bearer tokens. The current client stores a token in localStorage. A hardened client should keep it safer.
+- Auth: Laravel Sanctum bearer tokens. The current client stores the token in memory with a sessionStorage mirror for same-tab reload persistence.
 - Data delivery: relational Postgres. Notifications delivered via a simple notifications feed. No websockets for MVP.
 - Architecture: Decoupled API plus SPA. It matches the existing repo layout.
 ##4. Phases
 
-### Phase 1: Authentication & Session
+### Phase 1: Authentication & Session — Completed with known issues
 Goal: Users can register, log in, log out, and stay authenticated. Scope: Finalize the existing Sanctum auth into a reliable client flow. Add a shared authenticated fetch helper. Keep the token safer. Make logout revoke the token server-side. Fix the broken auth items from the audit. Done when: A user can sign up, log in, reach protected views, and log out. Refresh keeps the session.
 
 ### Phase 2: Profiles & Following

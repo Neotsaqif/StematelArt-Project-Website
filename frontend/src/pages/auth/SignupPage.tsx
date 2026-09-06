@@ -49,7 +49,7 @@ export function SignupPage() {
     setBusy(false);
 
     if (res.success) {
-      app.signIn();
+      app.signIn(res.data?.user);
       toast.success("Akun berhasil dibuat", { description: "Selamat datang, " + nama.trim().split(" ")[0] });
       app.navigate("onboarding");
     } else {
