@@ -49,7 +49,7 @@ Master Checklist
 COMMISSION & ESCROW — KIANDRA
 
 [x] Phase 0 — Repository, PRD & Architecture Audit
-[ ] Phase 1 — Commission Package Domain
+[x] Phase 1 — Commission Package Domain
 [ ] Phase 2 — Commission Order Domain
 [ ] Phase 3 — Order Lifecycle & Authorization
 [ ] Phase 4 — Midtrans Sandbox Integration
@@ -63,7 +63,7 @@ COMMISSION & ESCROW — KIANDRA
 [ ] Phase 12 — Sandbox → Production Readiness
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 1 / 14 phases completed
+PROGRESS: 2 / 14 phases completed
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -535,7 +535,7 @@ Midtrans environment separation sudah direncanakan.
 
 Phase 1 — Commission Package Domain
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE
 
 Tujuan:
 
@@ -1867,7 +1867,7 @@ Implementation: Not started
 Planning/Audit: Complete
 
 Phase 0  ████████████████████ 100%  [x]
-Phase 1  --------------------   0%  [ ]
+Phase 1  ████████████████████ 100%  [x]
 Phase 2  --------------------   0%  [ ]
 Phase 3  --------------------   0%  [ ]
 Phase 4  --------------------   0%  [ ]
