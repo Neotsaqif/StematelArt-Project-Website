@@ -2544,3 +2544,124 @@ Flow upload sekarang menjadi: validasi upload → decode image → apply waterma
 Replacement memproses dan mengunggah artwork baru terlebih dahulu. Reference database diperbarui sebelum artwork lama dihapus. Jika decoding, watermark, upload, atau update database gagal, artwork lama tetap dipertahankan dan file baru dibersihkan jika sudah tersimpan. Delete post tetap menghapus final artwork berdasarkan path trusted dari record post.
 
 Automated watermark tests menggunakan `Storage::fake()` dan memverifikasi binary output berbeda dari input serta masih dapat dibaca sebagai image. Verifikasi manual Supabase dilakukan dengan upload melalui Postman, membuka temporary URL, memastikan teks `StematelART` terlihat, lalu menguji replacement dan deletion.
+
+## Phase 1 Commission — Commission Package Domain
+
+Commission Package Domain adalah fondasi fitur commission StematelArt. Artist dapat membuat, mengelola, dan menonaktifkan paket commission yang ditampilkan kepada User. Implementasi ini merupakan bagian dari branch `feature/commission-and-escrow` sesuai `docs/commission.md`.
+
+### Database
+
+Tabel `commission_packages` ditambahkan melalui migration `2026_09_09_000001_create_commission_packages_table.php`:
+
+| Column | Type | Nullable | Default | Keterangan |
+|---|---|---|---|---|
+| id | bigint (unsigned) | No | auto-increment | Primary key |
+| artist_id | bigint (unsigned) | No | - | FK → users.id, cascade delete |
+| title | string | No | - | Judul paket |
+| description | text | Yes | null | Deskripsi paket |
+| price | unsigned integer | No | - | Harga dalam IDR (rupiah integer, min 0) |
+| platform_fee_rate | decimal(5,4) | No | 0.1000 | Rate fee platform (0.0000–1.0000) |
+| delivery_time | unsigned integer | No | - | Estimasi pengerjaan dalam hari (min 1) |
+| terms | text | Yes | null | Ketentuan paket |
+| active | boolean | No | true | Status aktif; false = deactivated |
+| created_at | timestamp | Yes | null | Waktu dibuat |
+| updated_at | timestamp | Yes | null | Waktu diperbarui |
+
+Index: `artist_id`, `active`.
+
+### Model
+
+`App\Models\CommissionPackage`:
+- `$fillable`: title, description, price, platform_fee_rate, delivery_time, terms, active
+- `artist_id` tidak termasuk `$fillable` (tidak boleh di-mass-assign dari request)
+- Relasi `artist()`: BelongsTo User (via artist_id)
+- Casts: price → integer, platform_fee_rate → decimal:4, delivery_time → integer, active → boolean
+
+`App\Models\User` ditambahkan relasi:
+- `commissionPackages()`: HasMany CommissionPackage (via artist_id)
+
+### Policy
+
+`App\Policies\CommissionPackagePolicy`:
+
+| Method | Authorized |
+|---|---|
+| view | Semua authenticated user |
+| create | Artist atau Admin |
+| update | Owner artist atau Admin |
+| delete | Owner artist atau Admin |
+
+Policy menggunakan `$user->is($package->artist)` untuk ownership check, tidak mempercayai artist_id atau role dari request.
+
+### Controller
+
+`App\Http\Controllers\Api\CommissionPackageController`:
+
+- `index` — list active packages, paginate (default 15, max 50), eager-load artist
+- `show` — detail satu package, eager-load artist
+- `store` — create package; artist_id SELALU dari `$request->user()`, bukan request body
+- `update` — partial update; ownership tidak dapat dialihkan
+- `destroy` — soft-deactivation: set `active = false`, record tetap ada
+
+### API Routes
+
+Semua route di bawah `auth:sanctum`:
+
+| Method | URI | Controller@Method | Authorization |
+|---|---|---|---|
+| GET | /api/commission/packages | index | Any authenticated user |
+| GET | /api/commission/packages/{commissionPackage} | show | Any authenticated user |
+| POST | /api/artist/commission/packages | store | Artist / Admin (policy) |
+| PUT | /api/artist/commission/packages/{commissionPackage} | update | Owner artist / Admin (policy) |
+| DELETE | /api/artist/commission/packages/{commissionPackage} | destroy | Owner artist / Admin (policy) |
+
+### Validasi
+
+| Field | Rules |
+|---|---|
+| title | required, string, max:255 |
+| description | nullable, string, max:5000 |
+| price | required, integer, min:0 |
+| platform_fee_rate | required, numeric, min:0, max:1 |
+| delivery_time | required, integer, min:1 |
+| terms | nullable, string, max:5000 |
+| active | sometimes, boolean |
+
+Update menggunakan `sometimes` sehingga hanya field yang dikirim yang divalidasi (partial update).
+
+### Deactivation Behavior
+
+DELETE route melakukan soft-deactivation (active = false), bukan hard delete. Record tetap ada di database untuk menjaga history referensi order di masa depan. Package yang inactive tidak muncul di default listing.
+
+### Security
+
+- `artist_id` tidak pernah diterima dari request body; selalu diambil dari `$request->user()->id`
+- Role injection dari request body tidak berpengaruh; authorization memakai role dari database
+- Ownership bypass diblokir oleh policy; Artist A tidak dapat mengubah package Artist B
+- Response eager-load artist dibatasi pada kolom `id,name,email,role,bio,avatar`; `password` dan `remember_token` tidak bocor
+
+### Test Coverage
+
+`tests/Feature/CommissionPackageTest.php` — 43 test case, 105 assertions:
+
+- Unauthenticated access → 401
+- Normal user create → 403
+- Artist create → 201
+- Admin create → 201
+- Ownership auto-assigned from authenticated user
+- artist_id injection blocked
+- role injection blocked (user/admin)
+- Validation: required fields, price min 0, fee rate 0–1, delivery_time min 1, title max 255
+- description/terms nullable
+- List: active only, pagination default 15, max 50, eager-load artist
+- Show: detail, 404 for nonexistent
+- Update: owner can update, cross-artist blocked, admin can update any, user blocked
+- Ownership reassignment via update blocked
+- Deactivate: owner deactivates, cross-artist blocked, admin can deactivate any, user blocked
+- Record persists after deactivation (soft)
+- Sensitive field protection (password, remember_token not in response)
+- User→commissionPackages relationship
+- CommissionPackage→artist relationship
+- Cascade delete (delete artist → packages deleted)
+- Foreign key constraint enforced
+- 404 for update/delete of nonexistent package

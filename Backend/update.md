@@ -237,3 +237,62 @@ Supabase bucket nyata belum diverifikasi dari environment ini. Automated tests m
 ## Batasan
 
 Verifikasi upload ke bucket Supabase nyata belum dilakukan dalam automated test. Test memakai fake filesystem. Verifikasi visual pada temporary URL Supabase perlu dilakukan manual setelah environment deployment aktif.
+
+---
+
+# Update Phase 1 — Commission Package Domain
+
+Tanggal: 2026-09-09
+Branch: feature/commission-and-escrow
+
+## Perubahan
+
+- Menambahkan migration baru untuk tabel commission_packages.
+- Menambahkan model CommissionPackage dengan fillable, casts, dan artist() relationship.
+- Menambahkan commissionPackages() HasMany relationship pada model User.
+- Menambahkan CommissionPackagePolicy untuk authorization (view, create, update, delete).
+- Menambahkan CommissionPackageController dengan method index, show, store, update, destroy.
+- Menambahkan 5 route baru di bawah auth:sanctum:
+  - GET  /api/commission/packages
+  - GET  /api/commission/packages/{commissionPackage}
+  - POST /api/artist/commission/packages
+  - PUT  /api/artist/commission/packages/{commissionPackage}
+  - DELETE /api/artist/commission/packages/{commissionPackage}
+- Menambahkan feature test CommissionPackageTest.php dengan 43 test case dan 105 assertions.
+- Memperbarui progress tracker commission.md (Phase 1 marked [x] COMPLETE).
+
+## Endpoint Baru
+
+- GET /api/commission/packages — list active packages, paginated, eager-load artist
+- GET /api/commission/packages/{commissionPackage} — show package detail
+- POST /api/artist/commission/packages — create package (artist/admin only)
+- PUT /api/artist/commission/packages/{commissionPackage} — update package (owner artist/admin)
+- DELETE /api/artist/commission/packages/{commissionPackage} — deactivate package (sets active=false)
+
+## Keamanan
+
+- artist_id tidak pernah diterima dari request; selalu diambil dari authenticated user.
+- Role injection dari request body tidak berpengaruh pada authorization.
+- Policy CommissionPackagePolicy memvalidasi ownership melalui relasi Eloquent, bukan artist_id dari request.
+- DELETE menggunakan soft-deactivation (active=false), bukan hard delete, untuk preservasi history.
+- Response eager-load artist menggunakan kolom terbatas (id, name, email, role, bio, avatar); password dan remember_token tidak bocor.
+- Pagination dibatasi maksimum 50 per halaman.
+
+## Validasi
+
+- title: required, string, max:255
+- description: nullable, string, max:5000
+- price: required, integer, min:0
+- platform_fee_rate: required, numeric, min:0, max:1
+- delivery_time: required, integer, min:1
+- terms: nullable, string, max:5000
+- active: sometimes, boolean
+
+## Hasil Verifikasi
+
+- php artisan test tests/Feature/CommissionPackageTest.php: 43 test, 105 assertion lulus.
+- composer test (full suite): 119 test, 369 assertion lulus (76 existing + 43 new).
+- php artisan migrate:status: seluruh 10 migration berstatus Ran; migration Phase 1 Commission berjalan pada batch 8.
+- php artisan route:list: berhasil, 31 route terdaftar (5 route baru commission).
+- git diff --check: berhasil tanpa whitespace error.
+- Tidak ada migration lama, Auth, Profile, Follow, Post, Storage, Watermark, frontend, .env, credential, atau package-lock.json yang diubah.

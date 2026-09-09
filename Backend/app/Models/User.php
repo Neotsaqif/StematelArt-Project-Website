@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\UserSetting;
+use App\Models\CommissionPackage;
 
 
 class User extends Authenticatable
@@ -84,5 +85,10 @@ class User extends Authenticatable
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
+    }
+
+    public function commissionPackages(): HasMany
+    {
+        return $this->hasMany(CommissionPackage::class, 'artist_id');
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\CommissionPackageController;
 
 Route::middleware('throttle:auth-register')
     ->post('/register', [AuthController::class, 'register']);
@@ -58,4 +59,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/posts', [PostController::class, 'store']);
     Route::put('/posts/{post}', [PostController::class, 'update']);
     Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+
+    // Commission Packages — read (any authenticated user)
+    Route::get('/commission/packages', [CommissionPackageController::class, 'index']);
+    Route::get('/commission/packages/{commissionPackage}', [CommissionPackageController::class, 'show']);
+
+    // Commission Packages — write (artist or admin only, enforced by policy)
+    Route::post('/artist/commission/packages', [CommissionPackageController::class, 'store']);
+    Route::put('/artist/commission/packages/{commissionPackage}', [CommissionPackageController::class, 'update']);
+    Route::delete('/artist/commission/packages/{commissionPackage}', [CommissionPackageController::class, 'destroy']);
 });
