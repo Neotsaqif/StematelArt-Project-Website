@@ -4,7 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\CommissionOrderStatus;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommissionOrder extends Model
 {
@@ -32,6 +34,7 @@ class CommissionOrder extends Model
         'platform_fee_amount' => 'integer',
         'artist_payout_amount' => 'integer',
         'deadline_at' => 'datetime',
+        'status' => CommissionOrderStatus::class,
     ];
 
     /**
@@ -56,5 +59,10 @@ class CommissionOrder extends Model
     public function artist(): BelongsTo
     {
         return $this->belongsTo(User::class, 'artist_id');
+    }
+
+    public function statusHistory(): HasMany
+    {
+        return $this->hasMany(OrderStatusHistory::class, 'order_id');
     }
 }

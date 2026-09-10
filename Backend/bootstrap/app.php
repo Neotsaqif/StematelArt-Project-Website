@@ -8,6 +8,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\ValidationException;
+use App\Exceptions\InvalidOrderTransitionException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use App\Http\Middleware\RoleMiddleware;
 
@@ -48,8 +49,9 @@ return Application::configure(basePath: dirname(__DIR__))
             $status = match (true) {
                 $exception instanceof AuthenticationException => 401,
                 $exception instanceof AuthorizationException => 403,
+                $exception instanceof InvalidOrderTransitionException => 409,
                 $exception instanceof HttpExceptionInterface
-                    && in_array($exception->getStatusCode(), [401, 403, 404, 429], true)
+                    && in_array($exception->getStatusCode(), [401, 403, 404, 409, 429], true)
                     => $exception->getStatusCode(),
                 default => 500,
             };
@@ -60,6 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     401 => 'Unauthenticated.',
                     403 => 'Forbidden.',
                     404 => 'Resource not found.',
+                    409 => $exception->getMessage(),
                     429 => 'Too many requests. Please try again later.',
                     default => 'An unexpected server error occurred.',
                 },
