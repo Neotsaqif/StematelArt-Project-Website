@@ -296,3 +296,103 @@ Branch: feature/commission-and-escrow
 - php artisan route:list: berhasil, 31 route terdaftar (5 route baru commission).
 - git diff --check: berhasil tanpa whitespace error.
 - Tidak ada migration lama, Auth, Profile, Follow, Post, Storage, Watermark, frontend, .env, credential, atau package-lock.json yang diubah.
+
+---
+
+# Update Phase 2 — Commission Order Domain
+
+Tanggal: 2026-09-10
+Branch: feature/commission-and-escrow
+
+## Perubahan
+
+- Menambahkan migration baru untuk tabel commission_orders.
+- Menambahkan model CommissionOrder dengan fillable, casts, dan relationships (package, buyer, artist).
+- Menambahkan commissionOrders() dan commissionSales() HasMany relationships pada model User.
+- Menambahkan orders() HasMany relationship pada model CommissionPackage.
+- Menambahkan CommissionOrderPolicy untuk authorization (viewAny, view, create).
+- Menambahkan CommissionOrderController dengan method index, show, store.
+- Menambahkan 3 route baru di bawah auth:sanctum:
+  - GET  /api/commission/orders
+  - GET  /api/commission/orders/{commissionOrder}
+  - POST /api/commission/orders
+- Menambahkan feature test CommissionOrderTest.php dengan 40 test case dan 102 assertions.
+- Memperbarui progress tracker commission.md (Phase 2 marked [x] COMPLETE).
+
+## Endpoint Baru
+
+- GET /api/commission/orders — list orders scoped by role (buyer/artist/admin), paginated
+- GET /api/commission/orders/{commissionOrder} — show order detail with authorization
+- POST /api/commission/orders — create order with server-side snapshot and validation
+
+## Keamanan
+
+- buyer_id tidak pernah diterima dari request; selalu diambil dari authenticated user.
+- artist_id tidak pernah diterima dari request; selalu diambil dari package.artist_id.
+- amount tidak pernah diterima dari request; selalu diambil dari package.price (snapshot).
+- platform_fee_amount calculated server-side menggunakan package.platform_fee_rate.
+- artist_payout_amount calculated server-side sebagai (amount - platform_fee_amount).
+- status awal selalu 'pending_payment'; tidak boleh di-inject dari request.
+- Package harus active untuk dapat membuat order baru.
+- Policy CommissionOrderPolicy memvalidasi ownership dengan role-based scoping.
+- Soft restriction dengan restrictOnDelete() untuk preservasi order history.
+- Response eager-load buyer, artist, package menggunakan kolom terbatas; password dan remember_token tidak bocor.
+- Pagination dibatasi maksimum 50 per halaman.
+
+## Validasi
+
+- package_id: required, integer, exists:commission_packages,id
+- brief: required, string, max:5000
+- reference_image: nullable, string, max:500
+- deadline_at: nullable, date, after:now
+
+## Business Rules
+
+- Amount snapshot: order.amount menyimpan package.price saat order dibuat dan tidak berubah meskipun package.price berubah di kemudian hari.
+- Artist snapshot: order.artist_id menyimpan package.artist_id saat order dibuat dan tidak berubah meskipun package ownership berubah.
+- Platform fee calculation: platform_fee_amount = round(amount × platform_fee_rate)
+- Artist payout calculation: artist_payout_amount = amount - platform_fee_amount
+- Money invariant: amount = platform_fee_amount + artist_payout_amount (integer IDR)
+- Inactive package tidak dapat digunakan untuk membuat order baru.
+
+## Authorization Scoping
+
+- Buyer: dapat melihat order dimana buyer_id = user.id
+- Artist: dapat melihat order dimana artist_id = user.id
+- Admin: dapat melihat semua order
+- 403 Forbidden untuk order yang tidak dimiliki user
+
+## Hasil Verifikasi
+
+- php artisan test tests/Feature/CommissionOrderTest.php: 40 test, 102 assertion lulus.
+- composer test (full suite): 159 test, 471 assertion lulus (119 existing + 40 new).
+- php artisan migrate:status: seluruh 11 migration berstatus Ran; migration Phase 2 Commission berjalan pada batch 8.
+- php artisan route:list --path=commission: berhasil, 8 route terdaftar (3 route baru commission orders).
+- git diff --check: berhasil tanpa whitespace error.
+- Tidak ada migration lama, Auth, Profile, Follow, Post, Storage, Watermark, CommissionPackage, frontend, .env, credential, atau package-lock.json yang diubah.
+
+## Batasan Phase 2
+
+Phase 2 TIDAK termasuk:
+- Midtrans integration
+- Payment gateway
+- Snap token generation
+- Webhook
+- Escrow hold/release
+- Payout mechanism
+- Order lifecycle actions (start, deliver, complete, release)
+- Order status history table
+- State machine transitions
+- Reference image binary upload (hanya string reference)
+- Frontend payment UI
+
+Phase 2 hanya membangun domain Commission Order yang aman dengan snapshot pricing, authorization kuat, dan siap digunakan oleh Phase 3 (lifecycle) dan Phase 4 (payment).
+
+## Assumptions & Limitations
+
+- Platform fee rate diambil dari package.platform_fee_rate yang sudah tersimpan di database saat package dibuat.
+- Pembulatan fee menggunakan round() half-up untuk hasil integer IDR.
+- deadline_at bersifat optional; jika diberikan harus di masa depan (after:now).
+- reference_image hanya string reference/path; binary upload akan diimplementasikan di phase berikutnya.
+- Timezone menggunakan konfigurasi aplikasi existing; tidak ada custom timezone handling.
+- Foreign key restrictOnDelete() mencegah penghapusan user/package yang memiliki order history.
