@@ -50,7 +50,7 @@ COMMISSION & ESCROW — KIANDRA
 
 [x] Phase 0 — Repository, PRD & Architecture Audit
 [x] Phase 1 — Commission Package Domain
-[ ] Phase 2 — Commission Order Domain
+[x] Phase 2 — Commission Order Domain
 [ ] Phase 3 — Order Lifecycle & Authorization
 [ ] Phase 4 — Midtrans Sandbox Integration
 [ ] Phase 5 — Payment Notification / Webhook Security
@@ -63,7 +63,7 @@ COMMISSION & ESCROW — KIANDRA
 [ ] Phase 12 — Sandbox → Production Readiness
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 2 / 14 phases completed
+PROGRESS: 3 / 14 phases completed
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -599,7 +599,7 @@ Full test suite tetap hijau.
 
 Phase 2 — Commission Order Domain
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE
 
 Tujuan:
 

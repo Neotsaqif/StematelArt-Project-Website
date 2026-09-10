@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommissionPackage extends Model
 {
@@ -30,5 +31,10 @@ class CommissionPackage extends Model
     public function artist(): BelongsTo
     {
         return $this->belongsTo(User::class, 'artist_id');
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(CommissionOrder::class, 'package_id');
     }
 }

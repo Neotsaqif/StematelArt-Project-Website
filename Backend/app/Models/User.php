@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\UserSetting;
 use App\Models\CommissionPackage;
+use App\Models\CommissionOrder;
 
 
 class User extends Authenticatable
@@ -90,5 +91,15 @@ class User extends Authenticatable
     public function commissionPackages(): HasMany
     {
         return $this->hasMany(CommissionPackage::class, 'artist_id');
+    }
+
+    public function commissionOrders(): HasMany
+    {
+        return $this->hasMany(CommissionOrder::class, 'buyer_id');
+    }
+
+    public function commissionSales(): HasMany
+    {
+        return $this->hasMany(CommissionOrder::class, 'artist_id');
     }
 }
