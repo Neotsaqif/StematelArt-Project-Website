@@ -734,7 +734,9 @@ Phase 3 Implementation Notes
 
 Phase 4 — Midtrans Sandbox Integration
 
-Status: [ ] NOT STARTED
+Status: [ ] COMPLETE WITH LIMITATION
+
+Implementasi backend Phase 4 tersedia, tetapi real Midtrans Sandbox verification belum dijalankan karena memerlukan credential Sandbox valid dan akses provider eksternal.
 
 Tujuan:
 

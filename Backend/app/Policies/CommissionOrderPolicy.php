@@ -41,6 +41,12 @@ class CommissionOrderPolicy
         return true;
     }
 
+    public function pay(User $user, CommissionOrder $order): bool
+    {
+        return $user->role !== 'admin'
+            && $user->id === $order->buyer_id;
+    }
+
     public function transition(User $user, CommissionOrder $order, CommissionOrderStatus $toStatus): bool
     {
         return match ($toStatus) {

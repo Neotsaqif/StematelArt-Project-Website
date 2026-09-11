@@ -35,6 +35,7 @@ class CommissionOrder extends Model
         'artist_payout_amount' => 'integer',
         'deadline_at' => 'datetime',
         'status' => CommissionOrderStatus::class,
+        'payment_created_at' => 'datetime',
     ];
 
     /**

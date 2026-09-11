@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\CommissionOrderStatus;
+use App\Exceptions\PaymentProviderException;
 use App\Http\Controllers\Controller;
 use App\Models\CommissionOrder;
 use App\Models\CommissionPackage;
@@ -10,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use App\Services\CommissionOrderService;
+use App\Services\Payments\MidtransService;
 
 class CommissionOrderController extends Controller
 {
@@ -67,6 +69,52 @@ class CommissionOrderController extends Controller
             'message' => 'Commission order retrieved successfully.',
             'data' => [
                 'order' => $commissionOrder,
+            ],
+        ]);
+    }
+
+    public function payment(Request $request, CommissionOrder $commissionOrder, MidtransService $midtrans)
+    {
+        Gate::authorize('pay', $commissionOrder);
+
+        $payment = DB::transaction(function () use ($commissionOrder, $midtrans) {
+            $lockedOrder = CommissionOrder::query()
+                ->whereKey($commissionOrder->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedOrder->status !== CommissionOrderStatus::PendingPayment) {
+                throw new \App\Exceptions\InvalidPaymentStateException('Payment is not available for this order.');
+            }
+
+            if ($lockedOrder->gateway_order_id && $lockedOrder->snap_token) {
+                return [
+                    'gateway_order_id' => $lockedOrder->gateway_order_id,
+                    'snap_token' => $lockedOrder->snap_token,
+                    'redirect_url' => null,
+                ];
+            }
+
+            $payment = $midtrans->createSnapTransaction($lockedOrder);
+
+            $lockedOrder->forceFill([
+                'gateway_order_id' => $payment['gateway_order_id'],
+                'snap_token' => $payment['snap_token'],
+                'payment_created_at' => now(),
+            ])->save();
+
+            return $payment;
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment created successfully.',
+            'data' => [
+                'payment' => [
+                    'order_id' => $payment['gateway_order_id'],
+                    'snap_token' => $payment['snap_token'],
+                    'redirect_url' => $payment['redirect_url'],
+                ],
             ],
         ]);
     }

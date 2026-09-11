@@ -453,3 +453,55 @@ Branch: feature/commission-and-escrow
 - php artisan migrate:status: seluruh 12 migration berstatus Ran.
 - php artisan route:list --path=commission: lifecycle routes terdaftar.
 - git diff --check: bersih.
+
+---
+
+# Update Phase 4 — Midtrans Sandbox Integration
+
+Tanggal: 2026-09-10
+Branch: feature/commission-and-escrow
+
+## Implementasi
+
+- Menambahkan dependency resmi `midtrans/midtrans-php` versi `^2.6`.
+- Menambahkan konfigurasi environment-driven `services.midtrans`.
+- Menambahkan migration payment fields pada `commission_orders`:
+  - gateway_order_id (unique)
+  - snap_token
+  - payment_created_at
+- Menambahkan `MidtransService` untuk Snap transaction creation.
+- Menambahkan buyer-only endpoint:
+  - POST /api/commission/orders/{commissionOrder}/payment
+- Menambahkan `MidtransPaymentTest` dengan mocked service.
+
+## Payment Rules
+
+- Gateway order ID deterministic: `STEMATELART-COMMISSION-{order_id}`.
+- Gross amount selalu berasal dari `commission_orders.amount`.
+- Package title dan buyer identity berasal dari database.
+- Request amount, price, buyer_id, artist_id, dan status diabaikan.
+- Snap token creation tidak mengubah status order; order tetap `pending_payment`.
+- Server Key tidak dikembalikan ke response.
+- Provider failure dikembalikan sebagai HTTP 502 dengan pesan generic.
+
+## Idempotency
+
+- Payment reference dan Snap token disimpan pada order.
+- Duplicate request dengan token tersimpan mengembalikan token existing.
+- Payment endpoint menggunakan transaction dan `lockForUpdate()`.
+- Unique constraint database diterapkan pada gateway_order_id.
+
+## Batasan
+
+- Webhook dan notification verification belum diimplementasikan; termasuk Phase 5.
+- Signature verification dan payment status synchronization belum diimplementasikan.
+- Escrow, payout, release, refund, dan frontend payment UI belum diimplementasikan.
+- Real Sandbox transaction belum dijalankan dalam environment ini karena membutuhkan credential Sandbox valid dan akses provider eksternal.
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/MidtransPaymentTest.php`: 9 test, 30 assertions lulus.
+- `composer test` dari Backend/: 182 test, 536 assertions lulus.
+- `php artisan migrate:status`: seluruh 13 migration berstatus Ran.
+- `php artisan route:list --path=commission`: payment route terdaftar.
+- `git diff --check`: bersih.
