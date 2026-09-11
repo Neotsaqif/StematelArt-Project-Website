@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\CommissionOrderStatus;
 use App\Models\CommissionOrder;
 use App\Models\User;
 
@@ -38,5 +39,23 @@ class CommissionOrderPolicy
     public function create(User $user): bool
     {
         return true;
+    }
+
+    public function pay(User $user, CommissionOrder $order): bool
+    {
+        return $user->role !== 'admin'
+            && $user->id === $order->buyer_id;
+    }
+
+    public function transition(User $user, CommissionOrder $order, CommissionOrderStatus $toStatus): bool
+    {
+        return match ($toStatus) {
+            CommissionOrderStatus::InProgress,
+            CommissionOrderStatus::Delivered => $user->role === 'artist'
+                && $user->id === $order->artist_id,
+            CommissionOrderStatus::Completed => $user->role !== 'admin'
+                && $user->id === $order->buyer_id,
+            default => false,
+        };
     }
 }

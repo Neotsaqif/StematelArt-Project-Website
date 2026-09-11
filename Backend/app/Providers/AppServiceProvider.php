@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\CommissionOrder;
 use App\Models\Post;
+use App\Policies\CommissionOrderPolicy;
 use App\Policies\PostPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Post::class, PostPolicy::class);
+        Gate::policy(CommissionOrder::class, CommissionOrderPolicy::class);
 
         RateLimiter::for('auth-login', function (Request $request) {
             $email = strtolower(trim((string) $request->input('email')));

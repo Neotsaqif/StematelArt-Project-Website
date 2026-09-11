@@ -396,3 +396,112 @@ Phase 2 hanya membangun domain Commission Order yang aman dengan snapshot pricin
 - reference_image hanya string reference/path; binary upload akan diimplementasikan di phase berikutnya.
 - Timezone menggunakan konfigurasi aplikasi existing; tidak ada custom timezone handling.
 - Foreign key restrictOnDelete() mencegah penghapusan user/package yang memiliki order history.
+
+---
+
+# Update Phase 3 — Order Lifecycle & Authorization
+
+Tanggal: 2026-09-10
+Branch: feature/commission-and-escrow
+
+## Perubahan
+
+- Menambahkan backed enum CommissionOrderStatus untuk seluruh status dan allowed transitions.
+- Menambahkan migration order_status_history dengan foreign key restrictOnDelete().
+- Menambahkan model OrderStatusHistory dengan relationship order() dan actor().
+- Menambahkan relationship CommissionOrder::statusHistory().
+- Menambahkan CommissionOrderService sebagai satu-satunya pusat mutasi status.
+- Menambahkan lockForUpdate() dan DB transaction untuk transition atomic.
+- Menambahkan InvalidOrderTransitionException dengan response HTTP 409 Conflict.
+- Mendaftarkan CommissionOrderPolicy secara eksplisit.
+- Menambahkan endpoint lifecycle start, deliver, dan complete.
+- Menambahkan CommissionOrderLifecycleTest dengan 14 test dan 35 assertions.
+
+## State Machine
+
+- paid -> in_progress -> delivered -> completed
+- start hanya artist pemilik order.
+- deliver hanya artist pemilik order.
+- complete hanya buyer pemilik order.
+- Admin tidak dapat melakukan lifecycle mutation arbitrer.
+- Invalid transition dan repeated transition ditolak dengan HTTP 409.
+- Setiap transition valid membuat tepat satu history record.
+
+## Endpoint Baru
+
+- POST /api/commission/orders/{commissionOrder}/start
+- POST /api/commission/orders/{commissionOrder}/deliver
+- POST /api/commission/orders/{commissionOrder}/complete
+
+## Atomicity dan Concurrency
+
+- Order di-lock dengan lockForUpdate() di dalam DB transaction sebelum authorization dan validasi state.
+- Update order dan insert history berada dalam transaction yang sama.
+- Jika history gagal, perubahan status di-rollback.
+- Initial history null -> pending_payment tidak dibuat.
+
+## Batasan
+
+- Tidak ada endpoint paid, expired, cancelled, atau released.
+- Tidak ada Midtrans, escrow, payout, release workflow, atau payment integration.
+
+## Hasil Verifikasi
+
+- php artisan test tests/Feature/CommissionOrderLifecycleTest.php: 14 test, 35 assertions lulus.
+- composer test dari Backend/: 173 test, 506 assertions lulus.
+- php artisan migrate: migration order_status_history berhasil.
+- php artisan migrate:status: seluruh 12 migration berstatus Ran.
+- php artisan route:list --path=commission: lifecycle routes terdaftar.
+- git diff --check: bersih.
+
+---
+
+# Update Phase 4 — Midtrans Sandbox Integration
+
+Tanggal: 2026-09-10
+Branch: feature/commission-and-escrow
+
+## Implementasi
+
+- Menambahkan dependency resmi `midtrans/midtrans-php` versi `^2.6`.
+- Menambahkan konfigurasi environment-driven `services.midtrans`.
+- Menambahkan migration payment fields pada `commission_orders`:
+  - gateway_order_id (unique)
+  - snap_token
+  - payment_created_at
+- Menambahkan `MidtransService` untuk Snap transaction creation.
+- Menambahkan buyer-only endpoint:
+  - POST /api/commission/orders/{commissionOrder}/payment
+- Menambahkan `MidtransPaymentTest` dengan mocked service.
+
+## Payment Rules
+
+- Gateway order ID deterministic: `STEMATELART-COMMISSION-{order_id}`.
+- Gross amount selalu berasal dari `commission_orders.amount`.
+- Package title dan buyer identity berasal dari database.
+- Request amount, price, buyer_id, artist_id, dan status diabaikan.
+- Snap token creation tidak mengubah status order; order tetap `pending_payment`.
+- Server Key tidak dikembalikan ke response.
+- Provider failure dikembalikan sebagai HTTP 502 dengan pesan generic.
+
+## Idempotency
+
+- Payment reference dan Snap token disimpan pada order.
+- Duplicate request dengan token tersimpan mengembalikan token existing.
+- Payment endpoint menggunakan transaction dan `lockForUpdate()`.
+- Unique constraint database diterapkan pada gateway_order_id.
+
+## Batasan
+
+- Webhook dan notification verification belum diimplementasikan; termasuk Phase 5.
+- Signature verification dan payment status synchronization belum diimplementasikan.
+- Escrow, payout, release, refund, dan frontend payment UI belum diimplementasikan.
+- Real Sandbox transaction belum dijalankan dalam environment ini karena membutuhkan credential Sandbox valid dan akses provider eksternal.
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/MidtransPaymentTest.php`: 9 test, 30 assertions lulus.
+- `composer test` dari Backend/: 182 test, 536 assertions lulus.
+- `php artisan migrate:status`: seluruh 13 migration berstatus Ran.
+- `php artisan route:list --path=commission`: payment route terdaftar.
+- `git diff --check`: bersih.

@@ -74,4 +74,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/commission/orders', [CommissionOrderController::class, 'index']);
     Route::get('/commission/orders/{commissionOrder}', [CommissionOrderController::class, 'show']);
     Route::post('/commission/orders', [CommissionOrderController::class, 'store']);
+    Route::post('/commission/orders/{commissionOrder}/payment', [CommissionOrderController::class, 'payment']);
+    Route::post('/commission/orders/{commissionOrder}/start', [CommissionOrderController::class, 'start']);
+    Route::post('/commission/orders/{commissionOrder}/deliver', [CommissionOrderController::class, 'deliver']);
+    Route::post('/commission/orders/{commissionOrder}/complete', [CommissionOrderController::class, 'complete']);
 });

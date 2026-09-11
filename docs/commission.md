@@ -51,7 +51,7 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 0 — Repository, PRD & Architecture Audit
 [x] Phase 1 — Commission Package Domain
 [x] Phase 2 — Commission Order Domain
-[ ] Phase 3 — Order Lifecycle & Authorization
+[x] Phase 3 — Order Lifecycle & Authorization
 [ ] Phase 4 — Midtrans Sandbox Integration
 [ ] Phase 5 — Payment Notification / Webhook Security
 [ ] Phase 6 — Escrow Ledger & Hold State
@@ -63,7 +63,7 @@ COMMISSION & ESCROW — KIANDRA
 [ ] Phase 12 — Sandbox → Production Readiness
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 3 / 14 phases completed
+PROGRESS: 4 / 14 phases completed
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -721,9 +721,22 @@ Authorization diuji.
 
 Concurrent transition dipertimbangkan.
 
+Phase 3 Implementation Notes
+
+- CommissionOrderStatus backed enum memusatkan delapan status order dan allowed transitions.
+- CommissionOrderService menjalankan transition dengan Gate authorization, DB transaction, lockForUpdate(), dan status history atomic.
+- Endpoint lifecycle hanya tersedia untuk start, deliver, dan complete.
+- start dan deliver hanya untuk artist pemilik order; complete hanya untuk buyer pemilik order.
+- Invalid transition mengembalikan HTTP 409 Conflict.
+- Tidak ada initial history null -> pending_payment.
+- Tidak ada endpoint paid, expired, cancelled, released, Midtrans, escrow, payout, atau release workflow pada phase ini.
+- Concurrency protection menggunakan row lock; rollback test memastikan kegagalan history membatalkan update order.
+
 Phase 4 — Midtrans Sandbox Integration
 
-Status: [ ] NOT STARTED
+Status: [ ] COMPLETE WITH LIMITATION
+
+Implementasi backend Phase 4 tersedia, tetapi real Midtrans Sandbox verification belum dijalankan karena memerlukan credential Sandbox valid dan akses provider eksternal.
 
 Tujuan:
 

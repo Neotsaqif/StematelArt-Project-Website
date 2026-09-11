@@ -2665,3 +2665,26 @@ DELETE route melakukan soft-deactivation (active = false), bukan hard delete. Re
 - Cascade delete (delete artist → packages deleted)
 - Foreign key constraint enforced
 - 404 for update/delete of nonexistent package
+
+---
+
+# Commission Phase 4 — Midtrans Sandbox Integration
+
+Backend payment creation menggunakan SDK resmi `midtrans/midtrans-php` dan konfigurasi environment-driven:
+
+- `MIDTRANS_ENV`
+- `MIDTRANS_SERVER_KEY`
+- `MIDTRANS_CLIENT_KEY`
+- `MIDTRANS_IS_PRODUCTION`
+
+Endpoint:
+
+```text
+POST /api/commission/orders/{commissionOrder}/payment
+```
+
+Hanya buyer pemilik order yang dapat membuat payment. Gross amount, package title, dan buyer identity berasal dari database order/package/user. Request tidak dapat mengubah amount, buyer, artist, atau status.
+
+Gateway order ID menggunakan format deterministic `STEMATELART-COMMISSION-{order_id}`. Snap token dan payment reference disimpan pada order dengan unique constraint untuk mendukung idempotent duplicate request. Payment creation tidak mengubah status order menjadi `paid`; status tetap `pending_payment` sampai Phase 5 melakukan verification.
+
+Phase 4 belum mencakup webhook, signature verification, escrow, payout, release, refund, atau frontend payment UI. Automated tests menggunakan mocked payment service; real Sandbox verification memerlukan credential Sandbox valid dan belum dijalankan pada environment ini.
