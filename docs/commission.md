@@ -6,7 +6,7 @@ Owner: Kiandra (Dev 1)
 Backend: Laravel 12 REST API + Sanctum
 Database: PostgreSQL / Supabase
 Payment Gateway: Midtrans
-Current Status: Planning / Implementation belum dimulai
+Current Status: Phase 5 complete with limitation; automated webhook security verified, real Sandbox webhook verification pending
 
 0. Cara Menggunakan Dokumen Ini
 
@@ -52,8 +52,8 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 1 — Commission Package Domain
 [x] Phase 2 — Commission Order Domain
 [x] Phase 3 — Order Lifecycle & Authorization
-[ ] Phase 4 — Midtrans Sandbox Integration
-[ ] Phase 5 — Payment Notification / Webhook Security
+[x] Phase 4 — Midtrans Sandbox Integration
+[x] Phase 5 — Payment Notification / Webhook Security
 [ ] Phase 6 — Escrow Ledger & Hold State
 [ ] Phase 7 — Order Completion & Release Flow
 [ ] Phase 8 — Admin Escrow Dashboard / Ledger API
@@ -63,7 +63,7 @@ COMMISSION & ESCROW — KIANDRA
 [ ] Phase 12 — Sandbox → Production Readiness
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 4 / 14 phases completed
+PROGRESS: 5 / 14 phases completed
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -821,7 +821,9 @@ Integration test/mock tersedia.
 
 Phase 5 — Payment Notification / Webhook Security
 
-Status: [ ] NOT STARTED
+Status: [ ] COMPLETE WITH LIMITATION
+
+Backend webhook security dan automated tests sudah selesai. Real Sandbox webhook verification masih pending karena membutuhkan credential valid dan public HTTPS endpoint.
 
 Ini salah satu phase paling penting.
 
@@ -906,6 +908,22 @@ Unknown order → safe handling.
 Sensitive request data tidak dilog sembarangan.
 
 Webhook tests lengkap.
+
+Phase 5 Implementation Notes
+
+- Endpoint: POST /api/payments/midtrans/notification tanpa auth:sanctum.
+- Protocol: Midtrans notification fields order_id, transaction_status, status_code, gross_amount, signature_key, transaction_id, payment_type, dan fraud_status bila tersedia.
+- Signature: SHA-512(order_id + status_code + gross_amount + Server Key), dibandingkan dengan hash_equals().
+- Order lookup menggunakan gateway_order_id.
+- Gross amount wajib sama dengan commission_orders.amount.
+- settlement sukses; capture hanya sukses jika fraud_status tidak tersedia atau accept.
+- pending, deny, cancel, expire, dan failure tidak mengubah order menjadi paid.
+- pending_payment -> paid melalui CommissionOrderService dengan actor_id null.
+- Duplicate settlement aman melalui lockForUpdate(), transaction, state check, dan idempotent no-op.
+- Notification lama tidak dapat mengembalikan paid ke pending_payment.
+- Invalid payload/signature/order/amount menghasilkan response aman tanpa secret.
+- Tidak ada escrow, payout, release, refund, atau payment UI.
+- Automated tests lulus; real Sandbox webhook verification masih pending.
 
 Phase 6 — Escrow Ledger & Hold State
 
