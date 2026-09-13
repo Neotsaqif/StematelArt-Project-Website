@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Gate;
 
 class CommissionOrderService
 {
-    public function transition(CommissionOrder $order, CommissionOrderStatus|string $toStatus, User $actor): CommissionOrder
+    public function transition(CommissionOrder $order, CommissionOrderStatus|string $toStatus, ?User $actor = null): CommissionOrder
     {
         $targetStatus = $toStatus instanceof CommissionOrderStatus
             ? $toStatus
@@ -24,7 +24,14 @@ class CommissionOrderService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            Gate::forUser($actor)->authorize('transition', [$lockedOrder, $targetStatus]);
+            if ($actor !== null) {
+                Gate::forUser($actor)->authorize('transition', [$lockedOrder, $targetStatus]);
+            } elseif ($targetStatus !== CommissionOrderStatus::Paid) {
+                throw new InvalidOrderTransitionException(
+                    $lockedOrder->status->value,
+                    $targetStatus->value
+                );
+            }
 
             $currentStatus = $lockedOrder->status instanceof CommissionOrderStatus
                 ? $lockedOrder->status
@@ -41,7 +48,7 @@ class CommissionOrderService
                 'order_id' => $lockedOrder->id,
                 'from_status' => $currentStatus->value,
                 'to_status' => $targetStatus->value,
-                'actor_id' => $actor->id,
+                'actor_id' => $actor?->id,
                 'changed_at' => now(),
             ]);
 

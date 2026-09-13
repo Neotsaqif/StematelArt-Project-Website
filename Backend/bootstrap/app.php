@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\ValidationException;
 use App\Exceptions\InvalidOrderTransitionException;
+use App\Exceptions\InvalidMidtransNotificationException;
 use App\Exceptions\InvalidPaymentStateException;
 use App\Exceptions\PaymentProviderException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -51,11 +52,12 @@ return Application::configure(basePath: dirname(__DIR__))
             $status = match (true) {
                 $exception instanceof AuthenticationException => 401,
                 $exception instanceof AuthorizationException => 403,
+                $exception instanceof InvalidMidtransNotificationException => 400,
                 $exception instanceof InvalidOrderTransitionException,
                 $exception instanceof InvalidPaymentStateException => 409,
                 $exception instanceof PaymentProviderException => 502,
                 $exception instanceof HttpExceptionInterface
-                    && in_array($exception->getStatusCode(), [401, 403, 404, 409, 429, 502], true)
+                    && in_array($exception->getStatusCode(), [400, 401, 403, 404, 409, 429, 502], true)
                     => $exception->getStatusCode(),
                 default => 500,
             };
@@ -63,6 +65,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'message' => match ($status) {
+                    400 => 'Invalid payment notification.',
                     401 => 'Unauthenticated.',
                     403 => 'Forbidden.',
                     404 => 'Resource not found.',

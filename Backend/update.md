@@ -505,3 +505,58 @@ Branch: feature/commission-and-escrow
 - `php artisan migrate:status`: seluruh 13 migration berstatus Ran.
 - `php artisan route:list --path=commission`: payment route terdaftar.
 - `git diff --check`: bersih.
+
+---
+
+# Update Phase 5 — Payment Notification / Webhook Security
+
+Tanggal: 2026-09-10
+Branch: feature/commission-and-escrow
+
+## Implementasi
+
+- Menambahkan migration baru agar `order_status_history.actor_id` nullable untuk system/webhook transition.
+- Memperbarui CommissionOrderService agar menerima `User|null`.
+- Menambahkan `MidtransNotificationService`.
+- Menambahkan `MidtransNotificationController`.
+- Menambahkan route tanpa Sanctum:
+  - POST /api/payments/midtrans/notification
+- Menambahkan signature verification SHA-512.
+- Menambahkan gateway order reference dan gross amount verification.
+- Menambahkan transaction status dan fraud status handling.
+- Menambahkan idempotent duplicate notification handling.
+- Menambahkan lockForUpdate() untuk concurrent notification protection.
+- Menambahkan `MidtransNotificationTest`.
+
+## Notification Rules
+
+- `settlement` sukses setelah semua consistency check valid.
+- `capture` sukses hanya bila fraud status tidak tersedia atau bernilai `accept`.
+- `pending`, `deny`, `cancel`, `expire`, dan `failure` tidak membuat order menjadi paid.
+- Hanya `pending_payment -> paid` yang diproses webhook.
+- Webhook transition memakai actor_id null.
+- Duplicate success notification menjadi idempotent no-op.
+- Notification lama tidak dapat melakukan state regression.
+
+## Security
+
+- Signature menggunakan Server Key dari configuration server-side.
+- Perbandingan signature memakai hash_equals().
+- Lookup order hanya melalui gateway_order_id.
+- Gross amount wajib sama dengan order.amount.
+- Invalid payload, signature, reference, dan amount tidak mengubah database.
+- Response error tidak mengembalikan secret atau raw exception.
+
+## Batasan
+
+- Tidak ada escrow, payout, release, refund, atau frontend payment UI.
+- Real Sandbox webhook verification belum dijalankan karena membutuhkan credential valid dan public HTTPS endpoint.
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/MidtransNotificationTest.php`: 11 test, 40 assertions lulus.
+- `php artisan test tests/Feature/MidtransPaymentTest.php`: 9 test, 30 assertions lulus.
+- `composer test` dari Backend/: 193 test, 576 assertions lulus.
+- `php artisan migrate:status`: seluruh 14 migration berstatus Ran.
+- `php artisan route:list`: notification route terdaftar tanpa auth:sanctum.
+- `git diff --check`: bersih.

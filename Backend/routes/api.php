@@ -9,12 +9,15 @@ use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\CommissionPackageController;
 use App\Http\Controllers\Api\CommissionOrderController;
+use App\Http\Controllers\Api\MidtransNotificationController;
 
 Route::middleware('throttle:auth-register')
     ->post('/register', [AuthController::class, 'register']);
 
 Route::middleware('throttle:auth-login')
     ->post('/login', [AuthController::class, 'login']);
+
+Route::post('/payments/midtrans/notification', [MidtransNotificationController::class, 'store']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return response()->json([
