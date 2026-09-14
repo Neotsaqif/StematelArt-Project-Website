@@ -560,3 +560,54 @@ Branch: feature/commission-and-escrow
 - `php artisan migrate:status`: seluruh 14 migration berstatus Ran.
 - `php artisan route:list`: notification route terdaftar tanpa auth:sanctum.
 - `git diff --check`: bersih.
+
+---
+
+# Update Phase 6 — Escrow Ledger & Hold State
+
+Tanggal: 2026-09-14
+Branch: feature/commission-and-escrow
+
+## Implementasi
+
+- Menambahkan migration `escrow_transactions` dengan FK restrictOnDelete().
+- Menambahkan unique constraint `(order_id, type)` untuk satu logical hold per order.
+- Menambahkan enum `EscrowTransactionType` dan `EscrowTransactionStatus`.
+- Menambahkan model `EscrowTransaction` dan relationship `CommissionOrder::escrowTransactions()`.
+- Menambahkan `EscrowService::createHold()` dengan state validation, amount invariant, idempotency, transaction, dan lockForUpdate().
+- Mengintegrasikan hold ke verified Midtrans success flow.
+- Tidak menambahkan endpoint public escrow.
+
+## Hold Flow
+
+```text
+verified notification
+    -> pending_payment to paid
+    -> create hold
+    -> status history pending_payment to paid
+    -> commit
+```
+
+Jika hold gagal, seluruh transaction rollback. Hold tidak membuat status history `paid -> paid`.
+
+## Security and Integrity
+
+- Hold hanya untuk order status `paid`.
+- Amount hold berasal dari order.amount.
+- Gateway reference berasal dari verified server-side transaction_id.
+- Client tidak memiliki jalur untuk mengatur order_id, amount, type, atau status.
+- Duplicate hold dikembalikan sebagai existing hold.
+
+## Batasan
+
+- Release, payout, refund, withdrawal, dispute, admin escrow dashboard, dan frontend escrow UI belum diimplementasikan.
+- Real Sandbox payment-to-webhook-to-hold flow belum diverifikasi karena membutuhkan credential valid dan public HTTPS endpoint.
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/EscrowTransactionTest.php`: 5 test, 11 assertions lulus.
+- `php artisan test tests/Feature/MidtransNotificationTest.php`: 11 test, 40 assertions lulus.
+- `php artisan test tests/Feature/MidtransPaymentTest.php`: 9 test, 30 assertions lulus.
+- `composer test` dari Backend/: 198 test, 587 assertions lulus.
+- `php artisan migrate:status`: seluruh 15 migration berstatus Ran.
+- `git diff --check`: bersih.

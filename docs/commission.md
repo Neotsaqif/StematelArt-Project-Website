@@ -54,7 +54,7 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 3 — Order Lifecycle & Authorization
 [x] Phase 4 — Midtrans Sandbox Integration
 [x] Phase 5 — Payment Notification / Webhook Security
-[ ] Phase 6 — Escrow Ledger & Hold State
+[x] Phase 6 — Escrow Ledger & Hold State
 [ ] Phase 7 — Order Completion & Release Flow
 [ ] Phase 8 — Admin Escrow Dashboard / Ledger API
 [ ] Phase 9 — Failure, Expiry & Recovery Handling
@@ -63,7 +63,7 @@ COMMISSION & ESCROW — KIANDRA
 [ ] Phase 12 — Sandbox → Production Readiness
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 5 / 14 phases completed
+PROGRESS: 7 / 14 phases completed
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -927,7 +927,9 @@ Phase 5 Implementation Notes
 
 Phase 6 — Escrow Ledger & Hold State
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE WITH LIMITATION
+
+Automated escrow hold implementation and regression verification selesai. Real Sandbox payment-to-webhook-to-hold flow belum diverifikasi karena memerlukan credential valid dan public HTTPS endpoint.
 
 Tujuan:
 
@@ -981,6 +983,22 @@ Database transaction used.
 Tests for duplicate notification.
 
 Tests for transaction rollback.
+
+Phase 6 Implementation Notes
+
+- Schema `escrow_transactions`: order_id, type, amount, gateway_reference_id, status, timestamps.
+- `order_id` memakai restrictOnDelete(); unique `(order_id, type)` mencegah duplicate logical hold.
+- Enum `EscrowTransactionType` menyediakan hold, release, refund; Phase 6 hanya membuat hold.
+- Enum `EscrowTransactionStatus` menyediakan held untuk hold sukses.
+- Hold hanya dibuat untuk order paid.
+- Amount hold selalu berasal dari order.amount dan sama persis dengan snapshot order.
+- Gateway reference berasal dari transaction_id notification server-side yang sudah diverifikasi.
+- EscrowService memakai transaction dan lockForUpdate(); invocation duplicate mengembalikan hold existing.
+- Payment flow membuat transition paid dan hold dalam transaction webhook yang sama; hold gagal menyebabkan rollback.
+- Escrow hold tidak membuat paid -> paid history.
+- Tidak ada endpoint public untuk membuat hold.
+- Release, payout, refund, withdrawal, dispute, admin escrow dashboard, dan frontend escrow UI tetap berada di phase berikutnya.
+- Automated tests lulus; real Sandbox flow masih limitation.
 
 Phase 7 — Order Completion & Release Flow
 

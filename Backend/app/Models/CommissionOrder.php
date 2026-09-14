@@ -66,4 +66,9 @@ class CommissionOrder extends Model
     {
         return $this->hasMany(OrderStatusHistory::class, 'order_id');
     }
+
+    public function escrowTransactions(): HasMany
+    {
+        return $this->hasMany(EscrowTransaction::class, 'order_id');
+    }
 }
