@@ -2638,3 +2638,17 @@ Hanya buyer pemilik order yang dapat membuat payment. Gross amount, package titl
 Gateway order ID menggunakan format deterministic `STEMATELART-COMMISSION-{order_id}`. Snap token dan payment reference disimpan pada order dengan unique constraint untuk mendukung idempotent duplicate request. Payment creation tidak mengubah status order menjadi `paid`; status tetap `pending_payment` sampai Phase 5 melakukan verification.
 
 Phase 4 belum mencakup webhook, signature verification, escrow, payout, release, refund, atau frontend payment UI. Automated tests menggunakan mocked payment service; real Sandbox verification memerlukan credential Sandbox valid dan belum dijalankan pada environment ini.
+
+## Commission Phase 6 — Escrow Ledger & Hold State
+
+Phase 6 menambahkan tabel `escrow_transactions` sebagai ledger/state aplikasi, bukan wallet internal. Hold dibuat server-side setelah notification Midtrans tervalidasi dan order berubah dari `pending_payment` menjadi `paid`.
+
+- `EscrowTransactionType`: hold, release, refund; Phase 6 hanya menggunakan hold.
+- `EscrowTransactionStatus`: held.
+- Hold amount selalu sama dengan `commission_orders.amount`.
+- `gateway_reference_id` berasal dari verified server-side transaction reference.
+- Unique `(order_id, type)` mencegah duplicate logical hold.
+- `EscrowService` memakai transaction dan `lockForUpdate()`.
+- Tidak ada endpoint public untuk membuat hold.
+- Release, payout, refund, withdrawal, dispute, dan admin escrow dashboard belum termasuk Phase 6.
+- Automated tests lulus; real Sandbox payment-to-webhook-to-hold verification masih pending.

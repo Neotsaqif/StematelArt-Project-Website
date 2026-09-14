@@ -5,13 +5,16 @@ namespace App\Services\Payments;
 use App\Enums\CommissionOrderStatus;
 use App\Exceptions\InvalidMidtransNotificationException;
 use App\Models\CommissionOrder;
+use App\Services\Commission\EscrowService;
 use App\Services\CommissionOrderService;
 use Illuminate\Support\Facades\DB;
 
 class MidtransNotificationService
 {
-    public function __construct(private CommissionOrderService $orderService)
-    {
+    public function __construct(
+        private CommissionOrderService $orderService,
+        private EscrowService $escrowService,
+    ) {
     }
 
     public function process(array $payload): CommissionOrder
@@ -47,6 +50,11 @@ class MidtransNotificationService
             }
 
             if ($order->status === CommissionOrderStatus::Paid) {
+                $this->escrowService->createHold(
+                    $order,
+                    isset($payload['transaction_id']) ? (string) $payload['transaction_id'] : null,
+                );
+
                 return $order;
             }
 
@@ -54,7 +62,14 @@ class MidtransNotificationService
                 throw new InvalidMidtransNotificationException('Invalid payment notification.');
             }
 
-            return $this->orderService->transition($order, CommissionOrderStatus::Paid, null);
+            $paidOrder = $this->orderService->transition($order, CommissionOrderStatus::Paid, null);
+
+            $this->escrowService->createHold(
+                $paidOrder,
+                isset($payload['transaction_id']) ? (string) $payload['transaction_id'] : null,
+            );
+
+            return $paidOrder;
         });
     }
 
