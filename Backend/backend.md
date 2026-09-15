@@ -1261,6 +1261,19 @@ Pedoman keamanan. Beberapa poin sudah diterapkan, beberapa adalah rekomendasi un
 
 ---
 
+# Commission Admin Escrow API
+
+Phase 8 menyediakan API read-only untuk admin dengan middleware `auth:sanctum` dan `role:admin`:
+
+- `GET /api/admin/commission/orders` — paginated order list, filter `status`, `buyer_id`, `artist_id`, dan whitelist sort `created_at`, `updated_at`, `amount`, `status`.
+- `GET /api/admin/commission/orders/{commissionOrder}` — detail order dengan package, buyer, artist, escrow transactions, status history, dan `escrow_consistency`.
+- `GET /api/admin/escrow/transactions` — paginated ledger dengan filter `type`, `status`, `order_id`, summary buyer/artist/order status, dan whitelist sorting.
+- `GET /api/admin/escrow/failed` — deteksi database inconsistency paid tanpa valid hold atau released tanpa valid release.
+
+Pagination menggunakan default 15 dan maksimum 50. Semua query menggunakan eager loading dan filter/sort whitelist untuk mencegah N+1 serta arbitrary SQL column access. Response tidak mengembalikan password, remember token, Sanctum token, provider secret, atau database credential.
+
+Admin endpoint tidak membuat atau mengubah order maupun ledger. Failed endpoint hanya membaca inconsistent state yang tersedia dari database; persistent failure state, recovery, expiry, dan retry-release tetap menjadi scope Phase 9.
+
 # 24. Current Backend Status
 
 Status aktual backend saat ini berdasarkan source code.
