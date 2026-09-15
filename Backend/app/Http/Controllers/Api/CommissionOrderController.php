@@ -10,8 +10,10 @@ use App\Models\CommissionPackage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
+use App\Services\Commission\EscrowService;
 use App\Services\CommissionOrderService;
 use App\Services\Payments\MidtransService;
+use Illuminate\Support\Facades\Log;
 
 class CommissionOrderController extends Controller
 {
@@ -133,11 +135,23 @@ class CommissionOrderController extends Controller
         return $this->lifecycleResponse($order, 'Commission order delivered successfully.');
     }
 
-    public function complete(Request $request, CommissionOrder $commissionOrder, CommissionOrderService $service)
+    public function complete(Request $request, CommissionOrder $commissionOrder, CommissionOrderService $service, EscrowService $escrow)
     {
         $order = $service->transition($commissionOrder, CommissionOrderStatus::Completed, $request->user());
 
-        return $this->lifecycleResponse($order, 'Commission order completed successfully.');
+        try {
+            $escrow->release($order);
+            $order = $order->fresh();
+
+            return $this->lifecycleResponse($order, 'Commission order completed and released successfully.');
+        } catch (\Throwable $exception) {
+            Log::error('Commission escrow release failed after completion.', [
+                'order_id' => $order->id,
+                'exception' => $exception::class,
+            ]);
+
+            return $this->lifecycleResponse($order, 'Commission order completed successfully. Escrow release requires administrative handling.');
+        }
     }
 
     private function lifecycleResponse(CommissionOrder $order, string $message)

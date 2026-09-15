@@ -6,7 +6,7 @@ Owner: Kiandra (Dev 1)
 Backend: Laravel 12 REST API + Sanctum
 Database: PostgreSQL / Supabase
 Payment Gateway: Midtrans
-Current Status: Phase 5 complete with limitation; automated webhook security verified, real Sandbox webhook verification pending
+Current Status: Phase 8 complete with limitation; admin visibility implemented, persistent failure/recovery workflow remains in Phase 9
 
 0. Cara Menggunakan Dokumen Ini
 
@@ -55,15 +55,15 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 4 — Midtrans Sandbox Integration
 [x] Phase 5 — Payment Notification / Webhook Security
 [x] Phase 6 — Escrow Ledger & Hold State
-[ ] Phase 7 — Order Completion & Release Flow
-[ ] Phase 8 — Admin Escrow Dashboard / Ledger API
+[x] Phase 7 — Order Completion & Release Flow
+[x] Phase 8 — Admin Escrow Dashboard / Ledger API
 [ ] Phase 9 — Failure, Expiry & Recovery Handling
 [ ] Phase 10 — Security Hardening & Payment Test Suite
 [ ] Phase 11 — Frontend Integration / Demo Flow
 [ ] Phase 12 — Sandbox → Production Readiness
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 7 / 14 phases completed
+PROGRESS: 9 / 14 phases completed
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -1112,7 +1112,24 @@ Test unauthorized release.
 
 Phase 8 — Admin Escrow Dashboard / Ledger API
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE
+
+Phase 8 Implementation Notes
+
+- Admin-only read architecture menggunakan `auth:sanctum` dan `role:admin` pada seluruh endpoint.
+- Endpoint: `GET /api/admin/commission/orders`, `GET /api/admin/commission/orders/{commissionOrder}`, `GET /api/admin/escrow/transactions`, dan `GET /api/admin/escrow/failed`.
+- Order list mendukung pagination default 15, maksimum 50, filter whitelist status/buyer_id/artist_id, sorting whitelist created_at/updated_at/amount/status, dan eager loading aman.
+- Order detail menampilkan buyer, artist, package, payment reference, escrow transactions, status history dengan actor nullable, serta informational `escrow_consistency`.
+- Escrow ledger menampilkan hold/release/refund sesuai data existing, amount, status, gateway reference, dan order summary terbatas.
+- Failed endpoint hanya mendeteksi inconsistent state dari database: paid tanpa valid hold dan released tanpa valid release. Endpoint tidak membuat failure record, tidak mengubah data, dan tidak mengandalkan application log.
+- Semua endpoint read-only. Tidak ada hold, release, payout, retry, refund, dispute, status mutation, atau amount mutation dari admin API.
+- Sensitive fields seperti password, remember_token, Sanctum token, Midtrans Server Key, dan database credentials tidak diserialisasi.
+- Test mencakup authorization user/artist/admin, filter, sorting, pagination, eager-loaded relationships, escrow consistency, failed-state detection, sensitive data, dan read-only behavior.
+- Dedicated persistent failure/recovery state belum tersedia. Recovery, retry-release, expiry, dan failure workflow tetap menjadi scope Phase 9.
+
+Status: COMPLETE WITH LIMITATION
+
+### 8.1 Admin Visibility
 
 Tujuan:
 
@@ -1917,13 +1934,13 @@ Planning/Audit: Complete
 
 Phase 0  ████████████████████ 100%  [x]
 Phase 1  ████████████████████ 100%  [x]
-Phase 2  --------------------   0%  [ ]
-Phase 3  --------------------   0%  [ ]
-Phase 4  --------------------   0%  [ ]
-Phase 5  --------------------   0%  [ ]
-Phase 6  --------------------   0%  [ ]
-Phase 7  --------------------   0%  [ ]
-Phase 8  --------------------   0%  [ ]
+Phase 2  ████████████████████ 100%  [x]
+Phase 3  ████████████████████ 100%  [x]
+Phase 4  ████████████████████ 100%  [x]
+Phase 5  ████████████████████ 100%  [x]
+Phase 6  ████████████████████ 100%  [x]
+Phase 7  ████████████████████ 100%  [x]
+Phase 8  ████████████████████ 100%  [x]
 Phase 9  --------------------   0%  [ ]
 Phase 10 --------------------   0%  [ ]
 Phase 11 --------------------   0%  [ ]

@@ -611,3 +611,42 @@ Jika hold gagal, seluruh transaction rollback. Hold tidak membuat status history
 - `composer test` dari Backend/: 198 test, 587 assertions lulus.
 - `php artisan migrate:status`: seluruh 15 migration berstatus Ran.
 - `git diff --check`: bersih.
+
+---
+
+# Update Phase 8 — Admin Escrow Dashboard / Ledger API
+
+Tanggal: 2026-09-15
+Branch: feature/commission-and-escrow
+
+## Implementasi
+
+- Menambahkan `AdminCommissionOrderController` untuk admin order listing dan detail dengan consistency reporting.
+- Menambahkan `AdminEscrowController` untuk admin escrow transactions ledger dan failed/inconsistent state query.
+- Mendaftarkan route admin baru di bawah `auth:sanctum` dan `role:admin`:
+  - `GET /api/admin/commission/orders`
+  - `GET /api/admin/commission/orders/{commissionOrder}`
+  - `GET /api/admin/escrow/transactions`
+  - `GET /api/admin/escrow/failed`
+- Menambahkan `AdminEscrowTest` dengan 34 test cases (113 assertions) mencakup authorization, filtering, sorting, pagination, order detail, escrow ledger, consistency logic, failed endpoint, dan security serialization.
+- Memperbarui `CommissionOrderReleaseTest` agar assertion 404 pada route injection konsisten dengan exception handler application.
+
+## Admin Features
+
+- **Order List:** Paginated (default 15, max 50), status filter, buyer_id filter, artist_id filter, whitelist sorting (created_at, updated_at, amount, status), eager loading buyer, artist, package, dan escrow transactions summary.
+- **Order Detail:** Complete order info, buyer, artist, package, payment reference (gateway_order_id), escrow transactions, status history with actors, dan `escrow_consistency` check (valid: true/false, issues array).
+- **Escrow Ledger:** Paginated transaction listing, type filter (hold, release, refund), status filter (held, released), order_id filter, whitelist sorting, dan order summary (buyer name, artist name, order status).
+- **Failed Endpoint:** Deterministic query for inconsistent states (paid without hold, released without release) without creating fake records or altering database. Read-only.
+- **Security:** Strict `role:admin` and `auth:sanctum` middleware enforcement; user/artist return 403; unauthenticated returns 401; password, remember_token, Sanctum token, Server Key, and DB secrets never returned in serialized responses. Read-only design (no save/update/delete operations in path).
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/AdminEscrowTest.php`: 34 test, 113 assertions lulus.
+- `php artisan test tests/Feature/CommissionOrderReleaseTest.php`: 27 test, 52 assertions lulus.
+- `php artisan test tests/Feature/EscrowTransactionTest.php`: 5 test, 11 assertions lulus.
+- `php artisan test tests/Feature/MidtransNotificationTest.php`: 11 test, 40 assertions lulus.
+- `php artisan test tests/Feature/MidtransPaymentTest.php`: 9 test, 30 assertions lulus.
+- `composer test` dari Backend/: 259 test, 751 assertions lulus (semua PASS).
+- `php artisan migrate:status`: seluruh 15 migration berstatus Ran.
+- `php artisan route:list --path=admin`: 5 admin route terdaftar.
+- `git diff --check`: bersih.

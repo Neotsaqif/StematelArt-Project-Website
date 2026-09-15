@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\CommissionPackageController;
 use App\Http\Controllers\Api\CommissionOrderController;
+use App\Http\Controllers\Api\AdminCommissionOrderController;
+use App\Http\Controllers\Api\AdminEscrowController;
 use App\Http\Controllers\Api\MidtransNotificationController;
 
 Route::middleware('throttle:auth-register')
@@ -45,6 +47,13 @@ Route::middleware(['auth:sanctum', 'role:artist'])
     });
 
 
+
+Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
+    Route::get('/commission/orders', [AdminCommissionOrderController::class, 'index']);
+    Route::get('/commission/orders/{commissionOrder}', [AdminCommissionOrderController::class, 'show']);
+    Route::get('/escrow/transactions', [AdminEscrowController::class, 'transactions']);
+    Route::get('/escrow/failed', [AdminEscrowController::class, 'failed']);
+});
 
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
