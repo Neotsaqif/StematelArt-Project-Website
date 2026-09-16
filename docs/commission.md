@@ -6,7 +6,7 @@ Owner: Kiandra (Dev 1)
 Backend: Laravel 12 REST API + Sanctum
 Database: PostgreSQL / Supabase
 Payment Gateway: Midtrans
-Current Status: Phase 8 complete with limitation; admin visibility implemented, persistent failure/recovery workflow remains in Phase 9
+Current Status: Phase 9 complete with limitation; expiry, cancellation, and release recovery implemented, provider recovery verification remains limited
 
 0. Cara Menggunakan Dokumen Ini
 
@@ -57,13 +57,13 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 6 — Escrow Ledger & Hold State
 [x] Phase 7 — Order Completion & Release Flow
 [x] Phase 8 — Admin Escrow Dashboard / Ledger API
-[ ] Phase 9 — Failure, Expiry & Recovery Handling
+[x] Phase 9 — Failure, Expiry & Recovery Handling
 [ ] Phase 10 — Security Hardening & Payment Test Suite
 [ ] Phase 11 — Frontend Integration / Demo Flow
 [ ] Phase 12 — Sandbox → Production Readiness
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 9 / 14 phases completed
+PROGRESS: 10 / 14 phases completed
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -1186,7 +1186,20 @@ data rahasia payment yang tidak dibutuhkan.
 
 Phase 9 — Failure, Expiry & Recovery Handling
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE
+
+Phase 9 Implementation Notes
+
+- Payment Expiry: Ditangani oleh Artisan command `commission:expire-pending-payments` yang terdaftar pada scheduler Laravel (`hourly`). Expiry memvalidasi `payment_expires_at` atau timeout default `COMMISSION_PAYMENT_EXPIRY_MINUTES` (1440 menit / 24 jam). Status transitions `pending_payment -> expired` bersifat terminal dan menghasilkan status history dengan `actor_id = null`.
+- Cancel Handling: `POST /api/commission/orders/{order}/cancel` hanya dapat dipanggil oleh buyer pemilik order untuk status `pending_payment`. Cancel ditolak untuk `paid`, `in_progress`, `delivered`, `completed`, `released`, dan `expired`. Cancellation menghasilkan status history dengan `actor_id = buyer.id` serta merekam `cancelled_at`.
+- Payment Failure Mapping: Status Midtrans `deny`, `cancel`, `expire`, dan `failure` tidak mengubah order state secara destruktif, mempertahankan eligibility retry selama dalam payment window tanpa membuat status pseudo `payment_failed`.
+- Release Failure & Recovery: Jika automatic release gagal pada saat buyer complete, order tetap berada pada status `completed`, hold tetap utuh, dan kegagalan release dicatat persisten pada `escrow_transactions` (`type = release`, `status = failed`, `failure_reason`, `retry_count`, `last_attempted_at`).
+- Admin Retry: `POST /api/admin/commission/orders/{order}/retry-release` di bawah `auth:sanctum` dan `role:admin` memungkinkan admin mencoba kembali release maksimal 3 kali (`COMMISSION_RELEASE_MAX_RETRIES`). Jika berhasil, record diperbarui ke `status = released`, order menjadi `released`, dan status history dibuat.
+- Admin Visibility: `GET /api/admin/escrow/failed` diperbarui untuk mendeteksi persistent release failures selain inkonsistensi DB dasar.
+- Idempotency & Concurrency: Expiry dan cancellation aman dari multiple execution (`lockForUpdate()`, atomic updates). Retry release terlindungi dari double release melalui pengecekan status dan transaction locking.
+- Limitations: Actual payout/disbursement ke rekening artist belum terintegrasi secara otomatis ke provider. Refund/dispute money movement tetap berada di luar cakupan MVP.
+
+Phase 10 — Security Hardening & Payment Test Suite
 
 Tujuan:
 
@@ -1941,7 +1954,7 @@ Phase 5  ████████████████████ 100%  [x]
 Phase 6  ████████████████████ 100%  [x]
 Phase 7  ████████████████████ 100%  [x]
 Phase 8  ████████████████████ 100%  [x]
-Phase 9  --------------------   0%  [ ]
+Phase 9  ████████████████████ 100%  [x]
 Phase 10 --------------------   0%  [ ]
 Phase 11 --------------------   0%  [ ]
 Phase 12 --------------------   0%  [ ]

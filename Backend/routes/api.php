@@ -53,6 +53,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('/commission/orders/{commissionOrder}', [AdminCommissionOrderController::class, 'show']);
     Route::get('/escrow/transactions', [AdminEscrowController::class, 'transactions']);
     Route::get('/escrow/failed', [AdminEscrowController::class, 'failed']);
+    Route::post('/commission/orders/{commissionOrder}/retry-release', [AdminEscrowController::class, 'retryRelease']);
 });
 
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
@@ -90,4 +91,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/commission/orders/{commissionOrder}/start', [CommissionOrderController::class, 'start']);
     Route::post('/commission/orders/{commissionOrder}/deliver', [CommissionOrderController::class, 'deliver']);
     Route::post('/commission/orders/{commissionOrder}/complete', [CommissionOrderController::class, 'complete']);
+    Route::post('/commission/orders/{commissionOrder}/cancel', [CommissionOrderController::class, 'cancel']);
 });

@@ -25,6 +25,9 @@ class MidtransService
             throw new InvalidPaymentStateException('Payment is not available for this order.');
         }
 
+        $order->payment_expires_at = now()->addMinutes((int) config('services.commission.payment_expiry_minutes', 1440));
+        $order->save();
+
         $gatewayOrderId = $order->gateway_order_id ?: $this->gatewayOrderId($order);
 
         try {

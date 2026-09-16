@@ -1261,6 +1261,13 @@ Pedoman keamanan. Beberapa poin sudah diterapkan, beberapa adalah rekomendasi un
 
 ---
 
+- `POST /api/commission/orders/{commissionOrder}/cancel` — pembatalan order oleh buyer (khusus status `pending_payment`).
+- `POST /api/admin/commission/orders/{commissionOrder}/retry-release` — retry pelepasan escrow oleh admin dengan batas percobaan konfigurasi `COMMISSION_RELEASE_MAX_RETRIES` (default 3).
+
+### Console & Scheduler
+
+- `php artisan commission:expire-pending-payments` — memproses expired order pada status `pending_payment` yang melewati batas waktu `COMMISSION_PAYMENT_EXPIRY_MINUTES` (default 1440 menit / 24 jam). Command ini dijadwalkan per jam secara background.
+
 # Commission Admin Escrow API
 
 Phase 8 menyediakan API read-only untuk admin dengan middleware `auth:sanctum` dan `role:admin`:

@@ -650,3 +650,35 @@ Branch: feature/commission-and-escrow
 - `php artisan migrate:status`: seluruh 15 migration berstatus Ran.
 - `php artisan route:list --path=admin`: 5 admin route terdaftar.
 - `git diff --check`: bersih.
+
+---
+
+# Update Phase 9 — Failure, Expiry & Recovery Handling
+
+Tanggal: 2026-09-16
+Branch: feature/commission-and-escrow
+
+## Implementasi
+
+- Menambahkan migration baru `2026_09_16_000001_add_commission_recovery_tracking` untuk kolom:
+  - `commission_orders`: `payment_expires_at`, `cancelled_at`, `expired_at`, dan index `(status, payment_expires_at)`.
+  - `escrow_transactions`: `failure_reason`, `retry_count`, `last_attempted_at`.
+- Menambahkan status `Failed` pada enum `EscrowTransactionStatus`.
+- Menambahkan method `cancel()` dan `expire()` pada `CommissionOrderService` dengan transaction dan `lockForUpdate()`.
+- Menambahkan policy method `cancel` pada `CommissionOrderPolicy` untuk buyer-only authorization.
+- Menambahkan endpoint cancel `POST /api/commission/orders/{commissionOrder}/cancel`.
+- Menambahkan command `commission:expire-pending-payments` (`ExpirePendingPayments`) dan menjadwalkannya setiap jam via `bootstrap/app.php`.
+- Menambahkan method `retryRelease()` dan `recordReleaseFailure()` pada `EscrowService` dengan limit default 3 percobaan.
+- Menambahkan admin endpoint retry `POST /api/admin/commission/orders/{commissionOrder}/retry-release`.
+- Memperbarui `GET /api/admin/escrow/failed` agar mendeteksi persistent release failures selain inkonsistensi order hold/release.
+- Menambahkan feature tests `OrderExpiryTest` (16 test cases) dan `EscrowRecoveryTest` (7 test cases).
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/OrderExpiryTest.php`: 16 test, 29 assertions lulus.
+- `php artisan test tests/Feature/EscrowRecoveryTest.php`: 7 test, 12 assertions lulus.
+- `php artisan test tests/Feature/AdminEscrowTest.php`: 34 test, 113 assertions lulus.
+- `php artisan test tests/Feature/CommissionOrderReleaseTest.php`: 27 test, 52 assertions lulus.
+- `composer test`: 282 test, 793 assertions lulus (100% PASS).
+- `php artisan migrate:status`: 16 migration berstatus Ran.
+- `git diff --check`: bersih.
