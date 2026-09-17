@@ -650,3 +650,76 @@ Branch: feature/commission-and-escrow
 - `php artisan migrate:status`: seluruh 15 migration berstatus Ran.
 - `php artisan route:list --path=admin`: 5 admin route terdaftar.
 - `git diff --check`: bersih.
+
+---
+
+# Update Phase 9 — Failure, Expiry & Recovery Handling
+
+Tanggal: 2026-09-16
+Branch: feature/commission-and-escrow
+
+## Implementasi
+
+- Menambahkan migration baru `2026_09_16_000001_add_commission_recovery_tracking` untuk kolom:
+  - `commission_orders`: `payment_expires_at`, `cancelled_at`, `expired_at`, dan index `(status, payment_expires_at)`.
+  - `escrow_transactions`: `failure_reason`, `retry_count`, `last_attempted_at`.
+- Menambahkan status `Failed` pada enum `EscrowTransactionStatus`.
+- Menambahkan method `cancel()` dan `expire()` pada `CommissionOrderService` dengan transaction dan `lockForUpdate()`.
+- Menambahkan policy method `cancel` pada `CommissionOrderPolicy` untuk buyer-only authorization.
+- Menambahkan endpoint cancel `POST /api/commission/orders/{commissionOrder}/cancel`.
+- Menambahkan command `commission:expire-pending-payments` (`ExpirePendingPayments`) dan menjadwalkannya setiap jam via `bootstrap/app.php`.
+- Menambahkan method `retryRelease()` dan `recordReleaseFailure()` pada `EscrowService` dengan limit default 3 percobaan.
+- Menambahkan admin endpoint retry `POST /api/admin/commission/orders/{commissionOrder}/retry-release`.
+- Memperbarui `GET /api/admin/escrow/failed` agar mendeteksi persistent release failures selain inkonsistensi order hold/release.
+- Menambahkan feature tests `OrderExpiryTest` (16 test cases) dan `EscrowRecoveryTest` (7 test cases).
+
+## Hasil Verifikasi
+
+- `php artisan test tests/Feature/OrderExpiryTest.php`: 16 test, 29 assertions lulus.
+- `php artisan test tests/Feature/EscrowRecoveryTest.php`: 7 test, 12 assertions lulus.
+- `php artisan test tests/Feature/AdminEscrowTest.php`: 34 test, 113 assertions lulus.
+- `php artisan test tests/Feature/CommissionOrderReleaseTest.php`: 27 test, 52 assertions lulus.
+- `composer test`: 282 test, 793 assertions lulus (100% PASS).
+- `php artisan migrate:status`: 16 migration berstatus Ran.
+- `git diff --check`: bersih.
+
+---
+
+# Update Phase 10 — Security Hardening & Payment Test Suite
+
+Tanggal: 2026-09-17
+Branch: feature/commission-and-escrow
+
+## Security Hardening
+
+- Memperketat `EscrowService::retryRelease()` agar wajib memiliki persisted failed release dan tidak dapat menjadi initial release shortcut.
+- Menambahkan named rate limiters untuk payment, complete, cancel, admin retry-release, dan Midtrans notification.
+- Memindahkan penetapan `payment_expires_at` setelah provider mengembalikan Snap token yang valid.
+- Menambahkan validasi invariant financial order tanpa mengubah fee semantics.
+- Menyanitasi `failure_reason` menjadi controlled code `RELEASE_ATTEMPT_FAILED` dan menghindari raw exception/stack trace/secret di database.
+- Membatasi response admin retry-release ke explicit safe fields.
+
+## Test Suite
+
+- Menambahkan `CommissionSecurityTest` (11 tests, 59 assertions).
+- Menambahkan `CommissionRateLimitTest` (5 tests, 5 assertions).
+- Menambahkan `CommissionConcurrencyTest` (4 tests, 7 assertions).
+- Secret scan menemukan hanya config references dan placeholders; tidak ada actual secret.
+
+## Hasil Verifikasi
+
+- Focused security suite: 20 tests, 71 assertions lulus.
+- Phase 9 regression suite: seluruh test lulus.
+- `composer test`: 302 tests, 864 assertions lulus.
+- `php artisan optimize:clear`: berhasil.
+- `php artisan migrate:status`: seluruh 16 migration berstatus Ran.
+- `php artisan route:list`: berhasil.
+- `git diff --check`: bersih.
+
+## Limitations
+
+- Midtrans provider status API verification belum diimplementasikan sesuai scope Phase 10.
+- Actual payout/disbursement belum tersedia.
+- Refund/dispute belum tersedia.
+- Parallel PostgreSQL concurrency test belum dijalankan; concurrency tests menggunakan environment test repository.
+- Self-purchase policy dan gateway reference retry semantics tetap menjadi product/production decision.

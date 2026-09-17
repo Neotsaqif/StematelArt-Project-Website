@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CommissionOrder;
 use App\Models\EscrowTransaction;
+use App\Services\Commission\EscrowService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class AdminEscrowController extends Controller
 {
@@ -51,6 +53,53 @@ class AdminEscrowController extends Controller
             'message' => 'Escrow transactions retrieved successfully.',
             'data' => [
                 'transactions' => $transactions,
+            ],
+        ]);
+    }
+
+    public function retryRelease(Request $request, CommissionOrder $commissionOrder, EscrowService $escrow)
+    {
+        Gate::authorize('view', $commissionOrder);
+
+        if ($request->user()->role !== 'admin') {
+            abort(403);
+        }
+
+        $release = $escrow->retryRelease($commissionOrder);
+
+        if ($release->status->value === 'failed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Escrow release retry failed.',
+                'errors' => (object) [],
+            ], 409);
+        }
+
+        $order = $commissionOrder->fresh()->load([
+            'buyer:id,name,email,role,bio,avatar',
+            'artist:id,name,email,role,bio,avatar',
+            'package:id,artist_id,title,description,price,platform_fee_rate,delivery_time,active',
+            'escrowTransactions',
+            'statusHistory.actor:id,name,email,role',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Commission escrow release retry completed successfully.',
+            'data' => [
+                'order' => [
+                    'id' => $order->id,
+                    'status' => $order->status->value,
+                    'amount' => $order->amount,
+                    'platform_fee_amount' => $order->platform_fee_amount,
+                    'artist_payout_amount' => $order->artist_payout_amount,
+                    'gateway_order_id' => $order->gateway_order_id,
+                    'buyer' => $order->buyer,
+                    'artist' => $order->artist,
+                    'package' => $order->package,
+                    'escrow_transactions' => $order->escrowTransactions,
+                    'status_history' => $order->statusHistory,
+                ],
             ],
         ]);
     }
@@ -103,7 +152,26 @@ class AdminEscrowController extends Controller
                 ];
             });
 
-        $failedStates = $paidWithoutHold->concat($releasedWithoutRelease);
+        $releaseFailures = EscrowTransaction::query()
+            ->where('type', 'release')
+            ->where('status', 'failed')
+            ->with('order:id,status,buyer_id,artist_id,amount')
+            ->get()
+            ->map(function ($transaction) {
+                return [
+                    'order_id' => $transaction->order_id,
+                    'order_status' => $transaction->order?->status?->value,
+                    'issue' => 'release_failed',
+                    'description' => 'Escrow release attempt failed and requires recovery.',
+                    'failure_reason' => $transaction->failure_reason,
+                    'retry_count' => $transaction->retry_count,
+                    'last_attempted_at' => $transaction->last_attempted_at,
+                    'amount' => $transaction->amount,
+                    'created_at' => $transaction->created_at,
+                ];
+            });
+
+        $failedStates = $paidWithoutHold->concat($releasedWithoutRelease)->concat($releaseFailures);
 
         // Manual pagination since we're combining collections
         $perPage = $validated['per_page'] ?? 15;

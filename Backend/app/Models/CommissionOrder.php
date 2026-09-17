@@ -36,6 +36,9 @@ class CommissionOrder extends Model
         'deadline_at' => 'datetime',
         'status' => CommissionOrderStatus::class,
         'payment_created_at' => 'datetime',
+        'payment_expires_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'expired_at' => 'datetime',
     ];
 
     /**

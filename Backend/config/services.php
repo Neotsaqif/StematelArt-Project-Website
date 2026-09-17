@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'commission' => [
+        'payment_expiry_minutes' => (int) env('COMMISSION_PAYMENT_EXPIRY_MINUTES', 1440),
+        'release_max_retries' => (int) env('COMMISSION_RELEASE_MAX_RETRIES', 3),
+    ],
+
     'midtrans' => [
         'environment' => env('MIDTRANS_ENV', 'sandbox'),
         'server_key' => env('MIDTRANS_SERVER_KEY'),

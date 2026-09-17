@@ -18,6 +18,7 @@ class EscrowTransaction extends Model
         'amount' => 'integer',
         'type' => EscrowTransactionType::class,
         'status' => EscrowTransactionStatus::class,
+        'last_attempted_at' => 'datetime',
     ];
 
     public function order(): BelongsTo

@@ -44,6 +44,9 @@ class MidtransService
             throw new PaymentProviderException('Payment provider is temporarily unavailable.');
         }
 
+        $order->payment_expires_at = now()->addMinutes((int) config('services.commission.payment_expiry_minutes', 1440));
+        $order->save();
+
         return [
             'gateway_order_id' => $gatewayOrderId,
             'snap_token' => $snapToken,

@@ -145,6 +145,15 @@ class CommissionOrderController extends Controller
 
             return $this->lifecycleResponse($order, 'Commission order completed and released successfully.');
         } catch (\Throwable $exception) {
+            try {
+                $escrow->recordReleaseFailure($order, $exception);
+            } catch (\Throwable $recordingException) {
+                Log::error('Commission escrow release failure could not be persisted.', [
+                    'order_id' => $order->id,
+                    'exception' => $recordingException::class,
+                ]);
+            }
+
             Log::error('Commission escrow release failed after completion.', [
                 'order_id' => $order->id,
                 'exception' => $exception::class,
@@ -152,6 +161,15 @@ class CommissionOrderController extends Controller
 
             return $this->lifecycleResponse($order, 'Commission order completed successfully. Escrow release requires administrative handling.');
         }
+    }
+
+    public function cancel(Request $request, CommissionOrder $commissionOrder, CommissionOrderService $service)
+    {
+        Gate::authorize('cancel', $commissionOrder);
+
+        $order = $service->cancel($commissionOrder, $request->user());
+
+        return $this->lifecycleResponse($order, 'Commission order cancelled successfully.');
     }
 
     private function lifecycleResponse(CommissionOrder $order, string $message)
@@ -194,9 +212,18 @@ class CommissionOrderController extends Controller
             ], 422);
         }
 
-        $amount = $package->price;
-        $platformFeeAmount = (int) round($amount * $package->platform_fee_rate);
+        $amount = (int) $package->price;
+        $platformFeeRate = (float) $package->platform_fee_rate;
+        $platformFeeAmount = (int) round($amount * $platformFeeRate);
         $artistPayoutAmount = $amount - $platformFeeAmount;
+
+        if ($amount < 0 || $platformFeeAmount < 0 || $artistPayoutAmount < 0 || ($platformFeeAmount + $artistPayoutAmount) !== $amount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The selected package pricing is invalid.',
+                'errors' => (object) [],
+            ], 422);
+        }
 
         $order = DB::transaction(function () use ($request, $package, $validated, $amount, $platformFeeAmount, $artistPayoutAmount) {
             $order = new CommissionOrder();

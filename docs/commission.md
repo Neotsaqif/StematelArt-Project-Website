@@ -6,7 +6,7 @@ Owner: Kiandra (Dev 1)
 Backend: Laravel 12 REST API + Sanctum
 Database: PostgreSQL / Supabase
 Payment Gateway: Midtrans
-Current Status: Phase 8 complete with limitation; admin visibility implemented, persistent failure/recovery workflow remains in Phase 9
+Current Status: Phase 10 complete with limitation; security hardening and comprehensive test suite verified, sandbox/production provider verification remains pending
 
 0. Cara Menggunakan Dokumen Ini
 
@@ -57,13 +57,13 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 6 — Escrow Ledger & Hold State
 [x] Phase 7 — Order Completion & Release Flow
 [x] Phase 8 — Admin Escrow Dashboard / Ledger API
-[ ] Phase 9 — Failure, Expiry & Recovery Handling
-[ ] Phase 10 — Security Hardening & Payment Test Suite
+[x] Phase 9 — Failure, Expiry & Recovery Handling
+[x] Phase 10 — Security Hardening & Payment Test Suite
 [ ] Phase 11 — Frontend Integration / Demo Flow
 [ ] Phase 12 — Sandbox → Production Readiness
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 9 / 14 phases completed
+PROGRESS: 11 / 14 phases completed
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -1186,7 +1186,20 @@ data rahasia payment yang tidak dibutuhkan.
 
 Phase 9 — Failure, Expiry & Recovery Handling
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE
+
+Phase 9 Implementation Notes
+
+- Payment Expiry: Ditangani oleh Artisan command `commission:expire-pending-payments` yang terdaftar pada scheduler Laravel (`hourly`). Expiry memvalidasi `payment_expires_at` atau timeout default `COMMISSION_PAYMENT_EXPIRY_MINUTES` (1440 menit / 24 jam). Status transitions `pending_payment -> expired` bersifat terminal dan menghasilkan status history dengan `actor_id = null`.
+- Cancel Handling: `POST /api/commission/orders/{order}/cancel` hanya dapat dipanggil oleh buyer pemilik order untuk status `pending_payment`. Cancel ditolak untuk `paid`, `in_progress`, `delivered`, `completed`, `released`, dan `expired`. Cancellation menghasilkan status history dengan `actor_id = buyer.id` serta merekam `cancelled_at`.
+- Payment Failure Mapping: Status Midtrans `deny`, `cancel`, `expire`, dan `failure` tidak mengubah order state secara destruktif, mempertahankan eligibility retry selama dalam payment window tanpa membuat status pseudo `payment_failed`.
+- Release Failure & Recovery: Jika automatic release gagal pada saat buyer complete, order tetap berada pada status `completed`, hold tetap utuh, dan kegagalan release dicatat persisten pada `escrow_transactions` (`type = release`, `status = failed`, `failure_reason`, `retry_count`, `last_attempted_at`).
+- Admin Retry: `POST /api/admin/commission/orders/{order}/retry-release` di bawah `auth:sanctum` dan `role:admin` memungkinkan admin mencoba kembali release maksimal 3 kali (`COMMISSION_RELEASE_MAX_RETRIES`). Jika berhasil, record diperbarui ke `status = released`, order menjadi `released`, dan status history dibuat.
+- Admin Visibility: `GET /api/admin/escrow/failed` diperbarui untuk mendeteksi persistent release failures selain inkonsistensi DB dasar.
+- Idempotency & Concurrency: Expiry dan cancellation aman dari multiple execution (`lockForUpdate()`, atomic updates). Retry release terlindungi dari double release melalui pengecekan status dan transaction locking.
+- Limitations: Actual payout/disbursement ke rekening artist belum terintegrasi secara otomatis ke provider. Refund/dispute money movement tetap berada di luar cakupan MVP.
+
+Phase 10 — Security Hardening & Payment Test Suite
 
 Tujuan:
 
@@ -1249,7 +1262,21 @@ Tests.
 
 Phase 10 — Security Hardening & Payment Test Suite
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE
+
+Phase 10 Implementation Notes
+
+- Authentication & IDOR: Seluruh route commission dilindungi oleh `auth:sanctum` dengan role policies yang ketat; buyer, artist, dan admin isolation diuji secara komprehensif tanpa kebocoran data sensitif.
+- Retry-Release Hardening: `EscrowService::retryRelease()` kini mewajibkan adanya transaksi release berstatus `failed` sebelumnya, mencegah admin memicu initial release melalui endpoint retry.
+- Rate Limiting: Named rate limiters didaftarkan pada `AppServiceProvider` dan dipasang pada route sensitif: `commission-payment` (10/min), `commission-complete` (10/min), `commission-cancel` (10/min), `admin-retry-release` (10/min), dan `midtrans-notification` (120/min).
+- Payment Expiry Timing: `MidtransService::createSnapTransaction()` kini hanya memperbarui `payment_expires_at` setelah provider mengembalikan token Snap yang valid, menjaga atomisitas pembayaran.
+- Money Safety & Invariants: Validasi ketat diterapkan pada kalkulasi fee dan payout integer IDR (`amount = platform_fee_amount + artist_payout_amount`, non-negative), serta penanganan amount provider yang aman.
+- Failure Reason Sanitization: Database failure reasons kini menggunakan generic bounded strings (misal `RELEASE_ATTEMPT_FAILED`) dan tidak pernah menyimpan raw stack trace, SQL errors, atau secrets.
+- Admin Response Serialization: Endpoint admin retry-release mengembalikan payload JSON yang ter-serialize secara eksplisit dan menyembunyikan kolom sensitif internal.
+- Comprehensive Test Suite: Menambahkan `CommissionSecurityTest` (11 tests), `CommissionRateLimitTest` (5 tests), dan `CommissionConcurrencyTest` (4 tests) — total suite mencapai 302 passed tests (864 assertions).
+- Limitations: Provider status API verification belum diaktifkan secara synchronous per webhook; actual payout/disbursement ke rekening bank artist tetap berada di luar aplikasi backend (merchant manual withdrawal).
+
+Phase 11 — Frontend Integration / Demo Flow
 
 Phase ini wajib sebelum demo dianggap aman.
 
@@ -1929,7 +1956,7 @@ Feature: Commission & Escrow
 Gateway: Midtrans
 Current Environment: Sandbox (planned)
 Production Account: StematelArt account (planned)
-Implementation: Not started
+Implementation: Phases 0–10 complete with documented limitations
 Planning/Audit: Complete
 
 Phase 0  ████████████████████ 100%  [x]
@@ -1941,8 +1968,8 @@ Phase 5  ████████████████████ 100%  [x]
 Phase 6  ████████████████████ 100%  [x]
 Phase 7  ████████████████████ 100%  [x]
 Phase 8  ████████████████████ 100%  [x]
-Phase 9  --------------------   0%  [ ]
-Phase 10 --------------------   0%  [ ]
+Phase 9  ████████████████████ 100%  [x]
+Phase 10 ████████████████████ 100%  [x]
 Phase 11 --------------------   0%  [ ]
 Phase 12 --------------------   0%  [ ]
 Phase 13 --------------------   0%  [ ]
@@ -2020,4 +2047,4 @@ Kemudian:
 5. Tambahkan test sebelum menyatakan selesai.
 6. Update checkbox progress hanya jika bukti implementation/test tersedia.
 
-Current next action: mulai dari Phase 1 — Commission Package Domain. Jangan memasukkan Midtrans payment code sebelum domain commission_packages dan commission_orders memiliki foundation yang benar.
+Current next action: mulai dari Phase 11 — Frontend Integration / Demo Flow setelah security hardening Phase 10 selesai. Provider status API verification, actual payout, refund/dispute, dan production readiness tetap memiliki limitation terdokumentasi.

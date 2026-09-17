@@ -19,7 +19,8 @@ Route::middleware('throttle:auth-register')
 Route::middleware('throttle:auth-login')
     ->post('/login', [AuthController::class, 'login']);
 
-Route::post('/payments/midtrans/notification', [MidtransNotificationController::class, 'store']);
+Route::middleware('throttle:midtrans-notification')
+    ->post('/payments/midtrans/notification', [MidtransNotificationController::class, 'store']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return response()->json([
@@ -53,6 +54,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('/commission/orders/{commissionOrder}', [AdminCommissionOrderController::class, 'show']);
     Route::get('/escrow/transactions', [AdminEscrowController::class, 'transactions']);
     Route::get('/escrow/failed', [AdminEscrowController::class, 'failed']);
+    Route::middleware('throttle:admin-retry-release')
+        ->post('/commission/orders/{commissionOrder}/retry-release', [AdminEscrowController::class, 'retryRelease']);
 });
 
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
@@ -86,8 +89,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/commission/orders', [CommissionOrderController::class, 'index']);
     Route::get('/commission/orders/{commissionOrder}', [CommissionOrderController::class, 'show']);
     Route::post('/commission/orders', [CommissionOrderController::class, 'store']);
-    Route::post('/commission/orders/{commissionOrder}/payment', [CommissionOrderController::class, 'payment']);
+    Route::middleware('throttle:commission-payment')
+        ->post('/commission/orders/{commissionOrder}/payment', [CommissionOrderController::class, 'payment']);
     Route::post('/commission/orders/{commissionOrder}/start', [CommissionOrderController::class, 'start']);
     Route::post('/commission/orders/{commissionOrder}/deliver', [CommissionOrderController::class, 'deliver']);
-    Route::post('/commission/orders/{commissionOrder}/complete', [CommissionOrderController::class, 'complete']);
+    Route::middleware('throttle:commission-complete')
+        ->post('/commission/orders/{commissionOrder}/complete', [CommissionOrderController::class, 'complete']);
+    Route::middleware('throttle:commission-cancel')
+        ->post('/commission/orders/{commissionOrder}/cancel', [CommissionOrderController::class, 'cancel']);
 });

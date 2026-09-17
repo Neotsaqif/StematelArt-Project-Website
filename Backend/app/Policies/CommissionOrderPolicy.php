@@ -47,6 +47,12 @@ class CommissionOrderPolicy
             && $user->id === $order->buyer_id;
     }
 
+    public function cancel(User $user, CommissionOrder $order): bool
+    {
+        return $user->role !== 'admin'
+            && $user->id === $order->buyer_id;
+    }
+
     public function transition(User $user, CommissionOrder $order, CommissionOrderStatus $toStatus): bool
     {
         return match ($toStatus) {
@@ -54,6 +60,8 @@ class CommissionOrderPolicy
             CommissionOrderStatus::Delivered => $user->role === 'artist'
                 && $user->id === $order->artist_id,
             CommissionOrderStatus::Completed => $user->role !== 'admin'
+                && $user->id === $order->buyer_id,
+            CommissionOrderStatus::Cancelled => $user->role !== 'admin'
                 && $user->id === $order->buyer_id,
             default => false,
         };

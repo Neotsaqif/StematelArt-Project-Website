@@ -51,5 +51,63 @@ class AppServiceProvider extends ServiceProvider
                     'errors' => (object) [],
                 ], 429));
         });
+
+        RateLimiter::for('commission-payment', function (Request $request) {
+            $userKey = $request->user()?->id ?? $request->ip();
+
+            return Limit::perMinute(10)
+                ->by('commission-payment|'.$userKey)
+                ->response(fn () => response()->json([
+                    'success' => false,
+                    'message' => 'Too many payment requests. Please try again later.',
+                    'errors' => (object) [],
+                ], 429));
+        });
+
+        RateLimiter::for('commission-complete', function (Request $request) {
+            $userKey = $request->user()?->id ?? $request->ip();
+
+            return Limit::perMinute(10)
+                ->by('commission-complete|'.$userKey)
+                ->response(fn () => response()->json([
+                    'success' => false,
+                    'message' => 'Too many completion requests. Please try again later.',
+                    'errors' => (object) [],
+                ], 429));
+        });
+
+        RateLimiter::for('commission-cancel', function (Request $request) {
+            $userKey = $request->user()?->id ?? $request->ip();
+
+            return Limit::perMinute(10)
+                ->by('commission-cancel|'.$userKey)
+                ->response(fn () => response()->json([
+                    'success' => false,
+                    'message' => 'Too many cancellation requests. Please try again later.',
+                    'errors' => (object) [],
+                ], 429));
+        });
+
+        RateLimiter::for('admin-retry-release', function (Request $request) {
+            $userKey = $request->user()?->id ?? $request->ip();
+
+            return Limit::perMinute(10)
+                ->by('admin-retry-release|'.$userKey)
+                ->response(fn () => response()->json([
+                    'success' => false,
+                    'message' => 'Too many retry release attempts. Please try again later.',
+                    'errors' => (object) [],
+                ], 429));
+        });
+
+        RateLimiter::for('midtrans-notification', function (Request $request) {
+            return Limit::perMinute(120)
+                ->by('midtrans-notification|'.$request->ip())
+                ->response(fn () => response()->json([
+                    'success' => false,
+                    'message' => 'Too many notification requests. Please try again later.',
+                    'errors' => (object) [],
+                ], 429));
+        });
     }
 }
