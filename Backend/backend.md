@@ -1262,7 +1262,16 @@ Pedoman keamanan. Beberapa poin sudah diterapkan, beberapa adalah rekomendasi un
 ---
 
 - `POST /api/commission/orders/{commissionOrder}/cancel` — pembatalan order oleh buyer (khusus status `pending_payment`).
-- `POST /api/admin/commission/orders/{commissionOrder}/retry-release` — retry pelepasan escrow oleh admin dengan batas percobaan konfigurasi `COMMISSION_RELEASE_MAX_RETRIES` (default 3).
+- `POST /api/admin/commission/orders/{commissionOrder}/retry-release` — retry pelepasan escrow oleh admin dengan batas percobaan konfigurasi `COMMISSION_RELEASE_MAX_RETRIES` (default 3), hanya diizinkan bila terdapat failed release record.
+
+### Security Rate Limiters
+
+Named rate limiters terpasang pada endpoint sensitif:
+- `commission-payment`: 10 requests / menit per user/IP.
+- `commission-complete`: 10 requests / menit per user/IP.
+- `commission-cancel`: 10 requests / menit per user/IP.
+- `admin-retry-release`: 10 requests / menit per user/IP.
+- `midtrans-notification`: 120 requests / menit per IP.
 
 ### Console & Scheduler
 

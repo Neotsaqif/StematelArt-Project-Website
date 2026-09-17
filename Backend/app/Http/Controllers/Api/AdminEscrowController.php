@@ -68,15 +68,39 @@ class AdminEscrowController extends Controller
         $release = $escrow->retryRelease($commissionOrder);
 
         if ($release->status->value === 'failed') {
-            abort(500, 'Escrow release retry failed.');
+            return response()->json([
+                'success' => false,
+                'message' => 'Escrow release retry failed.',
+                'errors' => (object) [],
+            ], 409);
         }
 
-        $order = $commissionOrder->fresh();
+        $order = $commissionOrder->fresh()->load([
+            'buyer:id,name,email,role,bio,avatar',
+            'artist:id,name,email,role,bio,avatar',
+            'package:id,artist_id,title,description,price,platform_fee_rate,delivery_time,active',
+            'escrowTransactions',
+            'statusHistory.actor:id,name,email,role',
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Commission escrow release retry completed successfully.',
-            'data' => ['order' => $order],
+            'data' => [
+                'order' => [
+                    'id' => $order->id,
+                    'status' => $order->status->value,
+                    'amount' => $order->amount,
+                    'platform_fee_amount' => $order->platform_fee_amount,
+                    'artist_payout_amount' => $order->artist_payout_amount,
+                    'gateway_order_id' => $order->gateway_order_id,
+                    'buyer' => $order->buyer,
+                    'artist' => $order->artist,
+                    'package' => $order->package,
+                    'escrow_transactions' => $order->escrowTransactions,
+                    'status_history' => $order->statusHistory,
+                ],
+            ],
         ]);
     }
 

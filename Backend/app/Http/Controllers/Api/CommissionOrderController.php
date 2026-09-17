@@ -212,9 +212,18 @@ class CommissionOrderController extends Controller
             ], 422);
         }
 
-        $amount = $package->price;
-        $platformFeeAmount = (int) round($amount * $package->platform_fee_rate);
+        $amount = (int) $package->price;
+        $platformFeeRate = (float) $package->platform_fee_rate;
+        $platformFeeAmount = (int) round($amount * $platformFeeRate);
         $artistPayoutAmount = $amount - $platformFeeAmount;
+
+        if ($amount < 0 || $platformFeeAmount < 0 || $artistPayoutAmount < 0 || ($platformFeeAmount + $artistPayoutAmount) !== $amount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The selected package pricing is invalid.',
+                'errors' => (object) [],
+            ], 422);
+        }
 
         $order = DB::transaction(function () use ($request, $package, $validated, $amount, $platformFeeAmount, $artistPayoutAmount) {
             $order = new CommissionOrder();

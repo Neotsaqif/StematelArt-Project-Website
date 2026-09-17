@@ -162,7 +162,12 @@ class EscrowService
                 ->where('order_id', $lockedOrder->id)
                 ->where('type', EscrowTransactionType::Release->value)
                 ->where('status', EscrowTransactionStatus::Failed->value)
+                ->lockForUpdate()
                 ->first();
+
+            if (!$previousFailure) {
+                throw new RuntimeException('Escrow release retry is unavailable.');
+            }
 
             $maxRetries = (int) config('services.commission.release_max_retries', 3);
 
@@ -200,7 +205,7 @@ class EscrowService
             } catch (\Throwable $e) {
                 if ($previousFailure) {
                     $previousFailure->retry_count = $previousFailure->retry_count + 1;
-                    $previousFailure->failure_reason = $failureReason ?? $e->getMessage();
+                    $previousFailure->failure_reason = $failureReason ?? 'RELEASE_ATTEMPT_FAILED';
                     $previousFailure->last_attempted_at = now();
                     $previousFailure->save();
                 } else {
@@ -211,7 +216,7 @@ class EscrowService
                         'amount' => $lockedOrder->artist_payout_amount,
                         'gateway_reference_id' => $hold->gateway_reference_id,
                         'status' => EscrowTransactionStatus::Failed,
-                        'failure_reason' => $failureReason ?? $e->getMessage(),
+                        'failure_reason' => $failureReason ?? 'RELEASE_ATTEMPT_FAILED',
                         'retry_count' => 1,
                         'last_attempted_at' => now(),
                     ]);
@@ -262,12 +267,12 @@ class EscrowService
                     'amount' => $lockedOrder->artist_payout_amount,
                     'gateway_reference_id' => $hold->gateway_reference_id,
                     'status' => EscrowTransactionStatus::Failed,
-                    'failure_reason' => $exception->getMessage(),
+                    'failure_reason' => 'RELEASE_ATTEMPT_FAILED',
                     'retry_count' => 0,
                     'last_attempted_at' => now(),
                 ]);
             } else {
-                $failure->failure_reason = $exception->getMessage();
+                $failure->failure_reason = 'RELEASE_ATTEMPT_FAILED';
                 $failure->last_attempted_at = now();
             }
 
