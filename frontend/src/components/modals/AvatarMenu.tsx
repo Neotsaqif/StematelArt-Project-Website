@@ -36,10 +36,10 @@ export function AvatarMenu({ rect, onClose }: { rect: DOMRect | null; onClose: (
   return (
     <Popover rect={rect} onClose={onClose} width={230}>
       <div className="px-3.5 py-3 border-b border-[#E5E5E7] flex items-center gap-2.5">
-        <Av bg="#E81E28" initials="AU" size={34} />
+        <Av bg="#E81E28" initials={(app.currentUser?.name || "AU").slice(0, 2).toUpperCase()} size={34} />
         <div className="min-w-0">
-          <p className="text-sm font-bold text-[#0A0A0B] truncate">{app.loggedIn ? "Artvault User" : "Tamu"}</p>
-          <p className="text-xs text-[#A1A1AA]">{app.loggedIn ? "@artvault_user" : "Belum masuk"}</p>
+          <p className="text-sm font-bold text-[#0A0A0B] truncate">{app.currentUser?.name || "Tamu"}</p>
+          <p className="text-xs text-[#A1A1AA]">{app.currentUser?.email || "Belum masuk"}</p>
         </div>
       </div>
       <div className="py-1">

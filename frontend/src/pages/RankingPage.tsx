@@ -1,14 +1,14 @@
 import { useApp } from '../context/AppContext';
 import { ARTWORKS } from '../data/mockData';
-import { lifetimeScore, fmtPts, SINCE } from '../utils/helpers';
+import { lifetimeLikes, fmtPts, SINCE } from '../utils/helpers';
 import { Pic } from '../components/ui/Pic';
 import { EmptyBlock, ErrorBlock, SkeletonRows, Tip } from '../components/ui/FeedbackBlocks';
 import { Trophy, Crown } from '../components/ui/Icons';
 
-const RANKED = [...ARTWORKS].sort((a, b) => lifetimeScore(b) - lifetimeScore(a));
-const PODIUM = [0, 1, 2].map(i => ({ rank: i + 1, artwork: RANKED[i], pts: lifetimeScore(RANKED[i]) }));
-const LIST_ROWS = RANKED.slice(3, 13).map((a, i) => ({ rank: i + 4, artwork: a, pts: lifetimeScore(a) }));
-const PTS_TIP = "Skor = suka × 12 + komentar × 30 + dilihat × 0,6";
+const RANKED = [...ARTWORKS].sort((a, b) => lifetimeLikes(b) - lifetimeLikes(a));
+const PODIUM = [0, 1, 2].map(i => ({ rank: i + 1, artwork: RANKED[i], pts: lifetimeLikes(RANKED[i]) }));
+const LIST_ROWS = RANKED.slice(3, 13).map((a, i) => ({ rank: i + 4, artwork: a, pts: lifetimeLikes(a) }));
+const PTS_TIP = "Peringkat = total suka sepanjang masa (terbanyak di atas)";
 const SK = "bg-[#F5F5F5]";
 
 export function RankingPage() {
@@ -24,7 +24,7 @@ export function RankingPage() {
         </span>
         <h1 className="text-[28px] font-extrabold text-[#0A0A0B]">Peringkat Sepanjang Masa</h1>
       </div>
-      <p className="text-sm text-[#52525B] mb-7">Skor kumulatif dari suka, dilihat dan komentar sejak karya diunggah.</p>
+      <p className="text-sm text-[#52525B] mb-7">Peringkat berdasarkan total suka terbanyak sejak karya diunggah.</p>
 
       {viewState === "loading" ? (
         <>
@@ -34,9 +34,9 @@ export function RankingPage() {
           <SkeletonRows n={6} />
         </>
       ) : viewState === "empty" ? (
-        <EmptyBlock Icon={Trophy} title="Belum ada data" hint="Peringkat sepanjang masa muncul setelah karya pertama mengumpulkan poin." />
+        <EmptyBlock Icon={Trophy} title="Belum ada data" hint="Peringkat sepanjang masa muncul setelah karya pertama mendapatkan suka." />
       ) : viewState === "error" ? (
-        <ErrorBlock title="Gagal memuat peringkat" hint="Skor sepanjang masa tidak dapat dihitung saat ini. Coba beberapa saat lagi." onRetry={app.retry} />
+        <ErrorBlock title="Gagal memuat peringkat" hint="Peringkat sepanjang masa tidak dapat dimuat saat ini. Coba beberapa saat lagi." onRetry={app.retry} />
       ) : (
         <>
           {/* Podium */}
@@ -67,7 +67,7 @@ export function RankingPage() {
                     <Tip text={PTS_TIP}>
                       <span className="flex flex-col items-end cursor-help">
                         <span className="bg-white/95 text-[#C41A22] text-xs font-bold px-2 py-1 rounded-full block">{fmtPts(pts)}</span>
-                        <span className="text-white/60 text-[10px] font-semibold uppercase tracking-widest">Total Poin</span>
+                        <span className="text-white/60 text-[10px] font-semibold uppercase tracking-widest">Total Suka</span>
                       </span>
                     </Tip>
                   </div>
@@ -107,7 +107,7 @@ export function RankingPage() {
                 <div className="text-right flex-shrink-0" onClick={e => e.stopPropagation()}>
                   <Tip text={PTS_TIP}>
                     <span className="cursor-help block">
-                      <span className="text-sm font-bold text-[#C41A22] leading-tight block">{fmtPts(pts)} <span className="text-[10px] font-bold uppercase tracking-widest text-[#C41A22]/70">Poin</span></span>
+                      <span className="text-sm font-bold text-[#C41A22] leading-tight block">{fmtPts(pts)} <span className="text-[10px] font-bold uppercase tracking-widest text-[#C41A22]/70">Suka</span></span>
                       <span className="text-xs text-[#A1A1AA]">sejak {SINCE[artwork.id]}</span>
                     </span>
                   </Tip>

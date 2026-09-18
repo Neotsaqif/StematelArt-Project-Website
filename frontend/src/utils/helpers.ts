@@ -8,8 +8,7 @@ export const imgUrl = (photoId: string, w: number, h: number): string => {
 
 export const fmtNum = (n: number): string => (n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n));
 export const fmtPts = (n: number): string => n.toLocaleString("id-ID");
-export const lifetimeScore = (a: { likes: number; comments: number; views: number }): number =>
-  a.likes * 12 + a.comments * 30 + Math.round(a.views * 0.6);
+export const lifetimeLikes = (a: { likes: number }): number => a.likes;
 
 export const SINCE: Record<number, string> = {
   1: "14 Februari 2024", 2: "3 Maret 2024", 3: "27 Januari 2024", 4: "9 April 2024",

@@ -2,7 +2,7 @@
 
 ## Metadata
 - Feature: Profiles & Following(Phase 2.
-- Source: docs/IMPLEMENTATION_PLAN.md — Phase 2
+- Source: docs/PRD.md — Phase 2
 - Status: Not started
 - Target: Edit profile, upload avatar, follow artists
 

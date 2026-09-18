@@ -172,6 +172,15 @@ class AuthSecurityTest extends TestCase
         $this->withToken($token)->getJson('/api/user')->assertUnauthorized();
     }
 
+    public function test_logout_with_revoked_token_returns_unauthorized(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('revoked')->accessToken;
+        $token->delete();
+
+        $this->withToken($token->token)->postJson('/api/logout')->assertUnauthorized();
+    }
+
     public function test_logout_without_a_current_bearer_token_is_safe(): void
     {
         $user = User::factory()->create();
