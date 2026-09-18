@@ -6,7 +6,7 @@ Owner: Kiandra (Dev 1)
 Backend: Laravel 12 REST API + Sanctum
 Database: PostgreSQL / Supabase
 Payment Gateway: Midtrans
-Current Status: Phase 11 frontend integration complete — frontend, backend, and payment flow tested sandbox end-to-end; implementation notes, limitations, and next steps updated below.
+Current Status: Phase 10 complete with limitation; security hardening and comprehensive test suite verified, sandbox/production provider verification remains pending
 
 0. Cara Menggunakan Dokumen Ini
 
@@ -60,7 +60,7 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 9 — Failure, Expiry & Recovery Handling
 [x] Phase 10 — Security Hardening & Payment Test Suite
 [x] Phase 11 — Frontend Integration / Demo Flow
-[x] Phase 12 — Sandbox → Production Readiness (status placeholder)
+[ ] Phase 12 — Sandbox → Production Readiness (status placeholder)
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
 PROGRESS: 12 / 14 phases completed
