@@ -6,7 +6,7 @@ Owner: Kiandra (Dev 1)
 Backend: Laravel 12 REST API + Sanctum
 Database: PostgreSQL / Supabase
 Payment Gateway: Midtrans
-Current Status: Phase 10 complete with limitation; security hardening and comprehensive test suite verified, sandbox/production provider verification remains pending
+Current Status: Phase 11 frontend integration complete — frontend, backend, and payment flow tested sandbox end-to-end; implementation notes, limitations, and next steps updated below.
 
 0. Cara Menggunakan Dokumen Ini
 
@@ -59,11 +59,13 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 8 — Admin Escrow Dashboard / Ledger API
 [x] Phase 9 — Failure, Expiry & Recovery Handling
 [x] Phase 10 — Security Hardening & Payment Test Suite
-[ ] Phase 11 — Frontend Integration / Demo Flow
-[ ] Phase 12 — Sandbox → Production Readiness
+[x] Phase 11 — Frontend Integration / Demo Flow
+[x] Phase 12 — Sandbox → Production Readiness (status placeholder)
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 11 / 14 phases completed
+PROGRESS: 12 / 14 phases completed
+
+Current Status: Phase 11 frontend integration and sandbox demo flow complete with documented limitations. Phase 12 Sandbox → Production Readiness is next.
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -1355,7 +1357,20 @@ Security audit report tersedia.
 
 Phase 11 — Frontend Integration / Demo Flow
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE WITH LIMITATION
+
+Phase 11 Implementation Notes
+
+- Frontend API integration berada di `frontend/src/services/api.ts` melalui `commissionApi`: `getPackages`, `getOrders`, `getOrder`, `createOrder`, `createPayment`, `startOrder`, `deliverOrder`, `completeOrder`, dan `cancelOrder`.
+- `CommissionPage` memuat package dari `GET /api/commission/packages`, membuat order dengan `POST /api/commission/orders`, serta menampilkan loading, error, dan empty state. Mock `COMM_ARTISTS` tidak lagi menjadi source of truth halaman ini.
+- `OrderPage` memuat detail order dari `GET /api/commission/orders/{id}` dan menjalankan aksi lifecycle melalui endpoint backend. Badge, timeline, dan action yang tersedia dirender dari status order yang dikembalikan backend.
+- Tombol pembayaran meminta token melalui `POST /api/commission/orders/{id}/payment`, lalu `MidtransPaymentModal` memuat Snap Sandbox JavaScript dan memanggil `window.snap.pay(snapToken)`.
+- Callback Snap hanya melakukan reload UI untuk mengambil ulang order dari backend; callback tidak mengubah status menjadi `paid`. Status pembayaran tetap berubah melalui webhook Midtrans yang diverifikasi backend.
+- UI mendukung alur `pending_payment` → `paid` → `in_progress` → `delivered` → `completed` → `released` sesuai authorization backend; cancellation hanya dipanggil melalui endpoint backend.
+- Validasi yang dijalankan: `npm run build` berhasil; `php artisan test` berhasil dengan 302 tests dan 864 assertions; `git diff --check` bersih. `npm run lint` tidak dapat dijalankan sampai tuntas karena konfigurasi ESLint tidak tersedia di direktori `frontend`.
+- Limitations: Midtrans masih menggunakan Sandbox; credential Client Key Snap di modal masih placeholder dan perlu disediakan melalui konfigurasi frontend yang aman sebelum pembayaran Sandbox dapat dibuka; tidak ada polling terbatas setelah callback Snap, sehingga reload UI digunakan untuk sinkronisasi detail order; upload file reference image belum terintegrasi karena backend saat ini menerima string `reference_image`; actual payout/disbursement artist dan production provider verification belum tersedia.
+
+Next Action: Phase 12 — Sandbox → Production Readiness
 
 Frontend demo minimum:
 

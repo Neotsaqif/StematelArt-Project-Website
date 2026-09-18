@@ -1,4 +1,10 @@
-// API Service Client for ARTVAULT Backend
+import type {
+  CommissionPackage,
+  CommissionOrder,
+  CreateCommissionOrderPayload,
+  PaymentResponse,
+  ApiEnvelope,
+} from '../types';
 
 export interface RegisterPayload {
   name: string;
@@ -98,6 +104,126 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, authenti
   return data as T;
 }
 
+export function getAuthToken(): string | null {
+  if (memoryToken) return memoryToken;
+  if (typeof window === 'undefined') return null;
+  memoryToken = window.sessionStorage.getItem(TOKEN_KEY);
+  return memoryToken;
+}
+
+export function setAuthToken(token: string): void {
+  memoryToken = token;
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.setItem(TOKEN_KEY, token);
+  }
+}
+
+export function clearAuthToken(): void {
+  memoryToken = null;
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+export function getAuthUser(): any | null {
+  if (typeof window === 'undefined') return null;
+  const userStr = window.sessionStorage.getItem('auth_user');
+  if (!userStr) return null;
+  try {
+    return JSON.parse(userStr);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthUser(user: AuthUser): void {
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.setItem('auth_user', JSON.stringify(user));
+  }
+}
+
+export function clearAuthUser(): void {
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.removeItem('auth_user');
+  }
+}
+
+async function authFetch<T>(endpoint: string, options: RequestInit = {}): Promise<ApiEnvelope<T>> {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401) {
+      clearAuthToken();
+      clearAuthUser();
+    }
+
+    if (!res.ok) {
+      return {
+        success: false,
+        message: data.message || `HTTP ${res.status}: Request failed`,
+        data: data.data || ({} as T),
+        errors: data.errors || {},
+      };
+    }
+
+    return data;
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err.message || 'Gagal terhubung ke server backend.',
+      data: {} as T,
+    };
+  }
+}
+
+export async function getCurrentUser(): Promise<AuthResponse> {
+  const token = getAuthToken();
+  if (!token) {
+    return { success: false, message: 'Not authenticated' };
+  }
+  try {
+    const res = await fetch(`${API_BASE_URL}/user`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (res.status === 401) {
+        clearAuthToken();
+        clearAuthUser();
+      }
+      return { success: false, message: data.message || 'Gagal mengambil user.' };
+    }
+    if (data.data?.user) {
+      setAuthUser(data.data.user);
+    }
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Gagal terhubung ke server.' };
+  }
+}
+
 export async function registerUser(payload: RegisterPayload): Promise<AuthResponse> {
   try {
     const data = await apiFetch<AuthResponse>('/register', {
@@ -110,6 +236,7 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthRespon
 
     if (data.data?.token) {
       setToken(data.data.token);
+      if (data.data.user) setAuthUser(data.data.user);
     }
 
     return data;
@@ -134,6 +261,7 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
 
     if (data.data?.token) {
       setToken(data.data.token);
+      if (data.data.user) setAuthUser(data.data.user);
     }
 
     return data;
@@ -145,6 +273,61 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
     };
   }
 }
+
+export const commissionApi = {
+  async getPackages(perPage = 50): Promise<ApiEnvelope<{ packages: { data: CommissionPackage[] } | CommissionPackage[] }>> {
+    return authFetch<{ packages: { data: CommissionPackage[] } | CommissionPackage[] }>(`/commission/packages?per_page=${perPage}`);
+  },
+
+  async getPackage(id: number): Promise<ApiEnvelope<{ package: CommissionPackage }>> {
+    return authFetch<{ package: CommissionPackage }>(`/commission/packages/${id}`);
+  },
+
+  async createOrder(payload: CreateCommissionOrderPayload): Promise<ApiEnvelope<{ order: CommissionOrder }>> {
+    return authFetch<{ order: CommissionOrder }>('/commission/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getOrders(perPage = 50): Promise<ApiEnvelope<{ orders: { data: CommissionOrder[] } | CommissionOrder[] }>> {
+    return authFetch<{ orders: { data: CommissionOrder[] } | CommissionOrder[] }>(`/commission/orders?per_page=${perPage}`);
+  },
+
+  async getOrder(id: number | string): Promise<ApiEnvelope<{ order: CommissionOrder }>> {
+    return authFetch<{ order: CommissionOrder }>(`/commission/orders/${id}`);
+  },
+
+  async createPayment(orderId: number | string): Promise<ApiEnvelope<{ payment: PaymentResponse }>> {
+    return authFetch<{ payment: PaymentResponse }>(`/commission/orders/${orderId}/payment`, {
+      method: 'POST',
+    });
+  },
+
+  async startOrder(orderId: number | string): Promise<ApiEnvelope<{ order: CommissionOrder }>> {
+    return authFetch<{ order: CommissionOrder }>(`/commission/orders/${orderId}/start`, {
+      method: 'POST',
+    });
+  },
+
+  async deliverOrder(orderId: number | string): Promise<ApiEnvelope<{ order: CommissionOrder }>> {
+    return authFetch<{ order: CommissionOrder }>(`/commission/orders/${orderId}/deliver`, {
+      method: 'POST',
+    });
+  },
+
+  async completeOrder(orderId: number | string): Promise<ApiEnvelope<{ order: CommissionOrder }>> {
+    return authFetch<{ order: CommissionOrder }>(`/commission/orders/${orderId}/complete`, {
+      method: 'POST',
+    });
+  },
+
+  async cancelOrder(orderId: number | string): Promise<ApiEnvelope<{ order: CommissionOrder }>> {
+    return authFetch<{ order: CommissionOrder }>(`/commission/orders/${orderId}/cancel`, {
+      method: 'POST',
+    });
+  },
+};
 
 export async function fetchMe(): Promise<AuthUser | null> {
   if (!getToken()) return null;

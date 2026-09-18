@@ -7,7 +7,7 @@ import { AppCtx } from './context/AppContext';
 // Data & Helpers
 import { COLLECTION_SEED, ARTWORKS, ORDERS, AUTH_SCREENS, EXPORT_FRAMES } from './data/mockData';
 import { toast } from './utils/helpers';
-import { Artwork, Order, Collection, Notification, Comment, Profile, ConfirmSpec, AppOverlay, AppContextType } from './types';
+import { Artwork, Order, Collection, Notification, Comment, Profile, ConfirmSpec, AppOverlay, AppContextType, MidtransPaymentData, CommissionOrder } from './types';
 import { AuthUser, clearToken, fetchMe, getToken, logoutUser } from './services/api';
 
 // UI & Layout Components
@@ -31,7 +31,8 @@ import {
   Lightbox,
   SubmitModal,
   ParticipantsModal,
-  ConfirmDialog
+  ConfirmDialog,
+  MidtransPaymentModal
 } from './components/modals';
 
 // Pages
@@ -369,7 +370,6 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
     openArtwork: (a) => push("artwork", { artwork: a }),
     openProfile: () => push("profile"),
     openCommission: (p) => push("commission", p),
-    openOrder: (o) => push("order", { order: o }),
     openSearch: (q) => push("search", { q }),
     openCategory: (c) => push("category", { category: c }),
     openCollection: (c) => push("collection", { collection: c }),
@@ -418,6 +418,15 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
     openLightbox: (artwork) => setOverlay({ kind: "lightbox", artwork }),
     openSubmit: () => setOverlay({ kind: "submit" }),
     openParticipants: () => setOverlay({ kind: "participants" }),
+    openMidtransPayment: (data) => setOverlay({ kind: "midtrans", data }),
+    openOrder: (order) => {
+      if (!isStatic) {
+        const orderId = typeof order === 'object' ? order.id : order;
+        navigate(`/order/${orderId}`);
+      } else {
+        setStaticView(prev => ({ ...prev, screen: "order", params: { order } }));
+      }
+    },
   };
 
   const closeOverlay = () => setOverlay(null);
@@ -499,6 +508,9 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
         {overlay && overlay.kind === "lightbox"     && <Lightbox artwork={overlay.artwork!} onClose={closeOverlay} />}
         {overlay && overlay.kind === "submit"       && <SubmitModal onClose={closeOverlay} />}
         {overlay && overlay.kind === "participants" && <ParticipantsModal onClose={closeOverlay} />}
+        {overlay && overlay.kind === "midtrans" && overlay.data && (
+          <MidtransPaymentModal snapToken={overlay.data.snapToken} orderId={overlay.data.orderId} onClose={closeOverlay} />
+        )}
         {overlay && overlay.kind === "confirm"      && <ConfirmDialog spec={overlay.spec!} onClose={closeOverlay} />}
 
         <AnnotationLayer on={annotate} />
