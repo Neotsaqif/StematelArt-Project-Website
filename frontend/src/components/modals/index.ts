@@ -9,3 +9,4 @@ export * from './NotifDropdown';
 export * from './ParticipantsModal';
 export * from './SharePopover';
 export * from './SubmitModal';
+export * from './MidtransPaymentModal';

@@ -52,7 +52,7 @@ export function ProfilePage() {
               {following ? <><Check size={13} /> Mengikuti</> : "Ikuti"}
             </button>
             <button
-              onClick={() => app.openCommission({ artistId: "rio" })}
+              onClick={() => app.openCommission()}
               data-goes-to="→ Form komisi artist"
               className="border border-[#E5E5E7] text-[#0A0A0B] text-sm font-semibold px-4 py-2 rounded-full hover:border-[#0A0A0B] active:bg-[#F5F5F5] transition-colors"
             >Minta Komisi</button>

@@ -50,6 +50,104 @@ export interface CommissionArtist {
   tiers: CommissionTier[];
 }
 
+export type CommissionOrderStatus =
+  | 'pending_payment'
+  | 'paid'
+  | 'in_progress'
+  | 'delivered'
+  | 'completed'
+  | 'released'
+  | 'expired'
+  | 'cancelled';
+
+export interface CommissionUser {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  bio: string | null;
+  avatar: string | null;
+}
+
+export interface CommissionPackage {
+  id: number;
+  artist_id: number;
+  title: string;
+  description: string | null;
+  price: number;
+  platform_fee_rate: number;
+  delivery_time: number;
+  terms: string | null;
+  active: boolean;
+  artist: CommissionUser;
+}
+
+export interface OrderStatusHistory {
+  id: number;
+  order_id: number;
+  from_status: CommissionOrderStatus | null;
+  to_status: CommissionOrderStatus;
+  actor_id: number;
+  created_at: string;
+}
+
+export interface EscrowTransaction {
+  id: number;
+  order_id: number;
+  type: 'hold' | 'release' | 'refund';
+  status: 'held' | 'released' | 'failed';
+  gateway_reference: string | null;
+  amount: number;
+  created_at: string;
+  last_attempted_at: string | null;
+}
+
+export interface CommissionOrder {
+  id: number;
+  package_id: number;
+  buyer_id: number;
+  artist_id: number;
+  amount: number;
+  platform_fee_amount: number;
+  artist_payout_amount: number;
+  brief: string;
+  reference_image: string | null;
+  deadline_at: string | null;
+  status: CommissionOrderStatus;
+  payment_created_at: string | null;
+  payment_expires_at: string | null;
+  cancelled_at: string | null;
+  expired_at: string | null;
+  created_at: string;
+  updated_at: string;
+  buyer: CommissionUser;
+  artist: CommissionUser;
+  package: CommissionPackage;
+  status_history?: OrderStatusHistory[];
+  escrow_transactions?: EscrowTransaction[];
+}
+
+export interface CreateCommissionOrderPayload {
+  package_id: number;
+  brief: string;
+  reference_image?: string;
+  deadline_at?: string;
+}
+
+export interface PaymentResponse {
+  order_id: string;
+  snap_token: string;
+  redirect_url: string | null;
+}
+
+export interface ApiEnvelope<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  errors?: Record<string, string[]>;
+}
+
+// Deprecated mock Order, remove when migration complete.
 export interface Order {
   id: string;
   artist: string;
@@ -119,10 +217,16 @@ export interface ConfirmSpec {
 }
 
 export interface AppOverlay {
-  kind: 'login' | 'notifs' | 'avatar' | 'collections' | 'share' | 'more' | 'lightbox' | 'submit' | 'participants' | 'confirm';
+  kind: 'login' | 'notifs' | 'avatar' | 'collections' | 'share' | 'more' | 'lightbox' | 'submit' | 'participants' | 'confirm' | 'midtrans';
   rect?: DOMRect | null;
   artwork?: Artwork;
   spec?: ConfirmSpec;
+  data?: MidtransPaymentData;
+}
+
+export interface MidtransPaymentData {
+  snapToken: string;
+  orderId: string;
 }
 
 export interface AppContextType {
@@ -142,7 +246,7 @@ export interface AppContextType {
   openArtwork: (artwork: Artwork) => void;
   openProfile: (artistId?: string) => void;
   openCommission: (params?: any) => void;
-  openOrder: (order: Order) => void;
+  openOrder: (order: CommissionOrder | Order) => void;
   openSearch: (query: string) => void;
   openCategory: (category: string) => void;
   openCollection: (collection: Collection) => void;
@@ -160,4 +264,5 @@ export interface AppContextType {
   openLightbox: (artwork: Artwork) => void;
   openSubmit: () => void;
   openParticipants: () => void;
+  openMidtransPayment: (data: MidtransPaymentData) => void;
 }
