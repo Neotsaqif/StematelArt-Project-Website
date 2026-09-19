@@ -1368,12 +1368,11 @@ Status aktual backend saat ini berdasarkan source code (terakhir disinkronkan 20
 ### Belum diimplementasikan
 
 - [ ] Like / Unlike API
-- [ ] Comment API
+- [ ] Comment API  
 - [ ] Save / Unsave (collections) API
 - [ ] Share / copy post URL API
 - [ ] Feed Discovery / ranking API
 - [ ] Search / filter / pagination global API
-- [ ] Commission API
 - [ ] Contest API
 - [ ] Notification API
 - [ ] Admin management API (users, artists, posts, contests, moderation)
@@ -1423,8 +1422,16 @@ Berikut rencana pengembangan backend berdasarkan kebutuhan StematelART. Ini adal
 - Feed/discovery
 - Ranking berdasarkan like/popularity
 
-**Phase 8 — Commission**
-- Commission request
+**Phase 8 — Commission (COMPLETE)**
+- Commission package management
+- Commission order lifecycle
+- Payment integration with Midtrans
+- Escrow ledger and release system
+- Webhook signature verification
+- Admin escrow dashboard
+
+**Phase 9 — Contest (PENDING)**
+- Contest request
 - Status management
 
 **Phase 9 — Contest**
@@ -1501,9 +1508,9 @@ Laravel 12
 + API testing (Postman)
 ```
 
-Fondasi ini siap untuk dikembangkan ke tahap autentikasi lengkap (login, logout), role-based authorization, dan fitur-fitur inti (artwork, like, comment, commission, contest, notification, admin management).
+Fondasi ini siap untuk dikembangkan ke tahap fitur-fitur inti yang belum diimplementasikan (like, comment, discovery, contest, notification, admin management).
 
-Penting dicatat bahwa **sistem authentication belum lengkap**. Login, logout, middleware `auth:sanctum`, dan authorization berbasis role **belum diimplementasikan**. Dokumentasi ini dibuat berdasarkan source code aktual di repository pada branch `dev`, bukan berdasarkan asumsi atau template.
+**Sistem authentication, authorization, commission & escrow sudah lengkap** dengan login, logout, middleware `auth:sanctum`, role-based authorization (`RoleMiddleware`), dan payment integration terimplementasi penuh. Dokumentasi ini dibuat berdasarkan source code aktual di repository pada branch `dev`, bukan berdasarkan asumsi atau template.
 
 
 

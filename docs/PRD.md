@@ -346,30 +346,32 @@ Role enforcement is handled by `RoleMiddleware`; ownership enforcement (e.g., "o
 
 ## 7. Delivery Plan — Phased Roadmap
 
-The MVP is delivered as **12 dependency-ordered phases**, each shipping a complete end-to-end user-facing feature. As of **2026-09-06**, Phases 1–3 are done on the backend and the **Phase 1 frontend auth/session flow is implemented** (end-to-end); Social (4), Discovery (5), and Ranking (6) are not yet started. De-mocking the remaining phases is the primary remaining work.
+The MVP is delivered as **12 dependency-ordered phases**, each shipping a complete end-to-end user-facing feature. As of **2026-09-19**, Phases 1–3 and **Phase 12 (Commission & Escrow)** are technically complete (backend + frontend + tests); Phase 12 awaits external verification (production Midtrans account, HTTPS, webhook registration, banking/payout). Social (4), Discovery (5), Ranking (6) remain frontend mock-only with no backend implementation.
 
 | Phase | Name | Goal | Status |
 |---|---|---|---|
-| 1 | Authentication & Session | Register, log in, log out, stay authenticated | Backend done; frontend auth/session flow implemented |
-| 2 | Profiles & Following | Edit profile, upload avatar, follow/unfollow with persisted counts | Backend done; frontend wiring pending |
-| 3 | Posts & Artwork Upload | Upload, validate, and watermark artwork; CRUD with ownership checks | Backend done; frontend wiring pending |
-| 4 | Social Interaction | Like, comment (delete own), save, share | Not yet started |
-| 5 | Discovery & Search | Browse, search, filter, paginate public artworks | Not yet started |
-| 6 | Ranking | All-time ranking ordered by highest total likes | Not yet started |
-| 7 | Contests | Contest info, rules, prize, criteria, deadline, submission, participants | Not yet started |
-| 8 | Notifications | In-app notifications for likes/comments/follows/new posts/contests; read/unread tracking | Not yet started |
-| 9 | Artist Management | Admin invites/promotes/manages artist accounts | Not yet started |
-| 10 | Admin Panel | Admin manages users, artists, posts, contests; moderation | Not yet started |
-| 11 | Release & Hardening | Full integration pass, remove mock data, QA, security hardening, deploy | Not yet started |
-| 12 | Commission & Escrow | Order via artist packages, gateway payment into escrow, "Order Completed" release trigger | Not yet started |
+| 1 | Authentication & Session | Register, log in, log out, stay authenticated | COMPLETE |
+| 2 | Profiles & Following | Edit profile, upload avatar, follow/unfollow with persisted counts | Backend complete; frontend partially mock |
+| 3 | Posts & Artwork Upload | Upload, validate, and watermark artwork; CRUD with ownership checks | Backend complete; frontend partially mock |
+| 4 | Social Interaction | Like, comment (delete own), save, share | Not implemented (no backend) |
+| 5 | Discovery & Search | Browse, search, filter, paginate public artworks | Not implemented (no backend) |
+| 6 | Ranking | All-time ranking ordered by highest total likes | Not implemented (no backend) |
+| 7 | Contests | Contest info, rules, prize, criteria, deadline, submission, participants | Not implemented |
+| 8 | Notifications | In-app notifications for likes/comments/follows/new posts/contests; read/unread tracking | Not implemented |
+| 9 | Artist Management | Admin invites/promotes/manages artist accounts | Not implemented |
+| 10 | Admin Panel | Admin manages users, artists, posts, contests; moderation | Not implemented |
+| 11 | Release & Hardening | Full integration pass, remove mock data, QA, security hardening, deploy | Partially complete (hardening done for auth + commission) |
+| 12 | Commission & Escrow | Order via artist packages, gateway payment into escrow, "Order Completed" release trigger | COMPLETE (technical); external verification required |
 
 ### 7.1 Sprint Mapping (Business View)
 | Sprint | Duration | Focus | Phases Covered |
 |---|---|---|---|
 | **Sprint 1 — Core Platform** | 1–2 weeks | Auth, profile, follow, post CRUD/upload/watermark/storage, like/comment/save/share, discovery, ranking | 1–6 |
-| **Sprint 2 — Community Features** | TBD | Contest, notifications, artist management, commission & escrow | 7–9, 12 |
+| **Sprint 2 — Community Features** | TBD | Contest, notifications, artist management, commission & escrow | 7–9, 12 (Phase 12 technically complete) |
 | **Sprint 3 — Admin & Platform Management** | TBD | Admin panel, role & permission hardening, moderation | 10 |
 | **Sprint 4 — Integration & Release** | TBD | Full integration, testing, bug fixing, deployment, launch | 11 |
+
+**Note:** Phase 12 (Commission & Escrow) is technically complete as of 2026-09-19; external production verification (Midtrans production account, HTTPS domain, webhook registration, banking/payout capability) remains required for production go-live.
 
 ### 7.2 Development Workflow (per feature)
 ```

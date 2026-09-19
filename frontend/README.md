@@ -2,7 +2,7 @@
 
 Frontend modular yang sudah dipisahkan berdasarkan komponen dan halaman dari `frontend-legacy`.
 
-> **Status (2026-09-05):** prototipe UI beresolusi tinggi. Sebagian besar data adalah **mock** (`src/data/mockData.ts`) dengan state lokal React. Hanya alur **login/signup** yang terhubung ke backend Laravel via `src/services/api.ts`. Backend sendiri sudah berkembang (auth, profil/settings, follow, posts/artwork + watermark/storage) namun frontend belum di-wire ke endpoint tersebut — itu masih pekerjaan de-mocking berikutnya. Lihat `docs/AUDIT.md` untuk audit lengkap dan status terkini.
+> **Status (2026-09-19):** Fase 1 (Auth) selesai end-to-end. Fase 2–3 (Profil, Posts) backend selesai namun frontend sebagian mock. **Fase 12 (Commission & Escrow) selesai** — order creation, payment, webhook, escrow, admin ledger fully functional (Midtrans Sandbox). Fase 4–6 (Social, Discovery, Ranking) dan Fase 7–11 tetap mock-only. Lihat `docs/PRD.md` dan `docs/commission.md` untuk status lengkap.
 
 ## Tech Stack
 
@@ -16,17 +16,19 @@ Frontend modular yang sudah dipisahkan berdasarkan komponen dan halaman dari `fr
 frontend/
 ├── index.html                           # Entry point HTML
 ├── vite.config.ts                      # Vite config (proxy /api -> http://localhost:8000)
+├── .eslintrc.cjs                       # ESLint config
 ├── tailwind.config.js / postcss.config.js
 ├── tsconfig.json
 └── src/
     ├── main.tsx                        # Entry point React (BrowserRouter)
     ├── App.tsx                         # Root komponen, router, & shared state (context provider)
+    ├── vite-env.d.ts                   # Vite environment types
     ├── data/
     │   └── mockData.ts                 # Data mock & konstanta
     ├── context/
     │   └── AppContext.tsx              # Context & hook useApp()
     ├── services/
-    │   └── api.ts                      # API client (register/login ke backend Laravel)
+    │   └── api.ts                      # API client (auth, commission, payment)
     ├── types/
     │   └── index.ts                    # TypeScript interfaces (Artwork, Order, Collection, dll.)
     ├── utils/
@@ -53,6 +55,7 @@ frontend/
     │       ├── index.ts                # Barrel export
     │       ├── ModalShell.tsx          # Shell dasar Modal & Popover
     │       ├── LoginModal.tsx          # Modal login popup
+    │       ├── MidtransPaymentModal.tsx # Modal Midtrans payment (Commission)
     │       ├── NotifDropdown.tsx       # Popover notifikasi
     │       ├── AvatarMenu.tsx          # Popover menu profil user
     │       ├── CollectionsPopover.tsx  # Popover simpan ke koleksi
@@ -64,18 +67,18 @@ frontend/
     │       └── ConfirmDialog.tsx       # Dialog konfirmasi
     ├── pages/                          # Halaman Aplikasi
     │   ├── index.ts                    # Barrel export
-    │   ├── DiscoveryPage.tsx           # Halaman Discovery / Beranda
-    │   ├── RankingPage.tsx             # Halaman Papan Peringkat
-    │   ├── CommissionPage.tsx          # Halaman Pemesanan Komisi
-    │   ├── OrderPage.tsx               # Halaman Detail Pesanan
-    │   ├── ContestPage.tsx             # Halaman Kontes Seni
+    │   ├── DiscoveryPage.tsx           # Halaman Discovery / Beranda (mock)
+    │   ├── RankingPage.tsx             # Halaman Papan Peringkat (mock)
+    │   ├── CommissionPage.tsx          # Halaman Pemesanan Komisi (fully functional)
+    │   ├── OrderPage.tsx               # Halaman Detail Pesanan (fully functional)
+    │   ├── ContestPage.tsx             # Halaman Kontes Seni (mock)
     │   ├── ArtworkDetailPage.tsx       # Halaman Detail Karya
     │   ├── ProfilePage.tsx             # Halaman Profil Artist
-    │   ├── FavoritesPage.tsx           # Halaman Karya Favorit
-    │   ├── CollectionsPage.tsx         # Halaman Folder Koleksi
-    │   ├── CollectionDetailPage.tsx    # Halaman Isi Folder Koleksi
-    │   ├── SearchPage.tsx              # Halaman Hasil Pencarian
-    │   ├── CategoryPage.tsx            # Halaman Filter Kategori
+    │   ├── FavoritesPage.tsx           # Halaman Karya Favorit (mock)
+    │   ├── CollectionsPage.tsx         # Halaman Folder Koleksi (mock)
+    │   ├── CollectionDetailPage.tsx    # Halaman Isi Folder Koleksi (mock)
+    │   ├── SearchPage.tsx              # Halaman Hasil Pencarian (mock)
+    │   ├── CategoryPage.tsx            # Halaman Filter Kategori (mock)
     │   ├── SettingsPage.tsx            # Halaman Pengaturan
     │   ├── UploadPage.tsx              # Halaman Unggah Karya Multi-step
     │   ├── WatermarkPage.tsx           # Halaman Watermark Generator
@@ -83,23 +86,57 @@ frontend/
     │   └── auth/                       # Halaman Autentikasi
     │       ├── index.ts                # Barrel export
     │       ├── AuthLayout.tsx          # Layout & Form Helper Auth
-    │       ├── LoginPage.tsx           # Halaman Masuk
-    │       ├── SignupPage.tsx          # Halaman Daftar
+    │       ├── LoginPage.tsx           # Halaman Masuk (fully functional)
+    │       ├── SignupPage.tsx          # Halaman Daftar (fully functional)
     │       ├── ForgotPasswordPage.tsx  # Halaman Lupa Kata Sandi
     │       ├── CheckEmailPage.tsx      # Halaman Cek Email
     │       ├── ResetPasswordPage.tsx   # Halaman Atur Ulang Kata Sandi
     │       └── OnboardingPage.tsx      # Halaman Onboarding
 ```
 
+## Environment Variables
+
+Frontend menggunakan environment variables dengan prefix `VITE_` (yang masuk ke browser bundle):
+
+```bash
+# .env.local atau .env.development
+VITE_API_BASE_URL=http://localhost:8000
+VITE_MIDTRANS_ENV=sandbox
+VITE_MIDTRANS_SNAP_URL=https://app.sandbox.midtrans.com/snap/snap.js
+VITE_MIDTRANS_CLIENT_KEY=YOUR_MIDTRANS_CLIENT_KEY
+```
+
+**PENTING:** 
+- `VITE_*` variables dapat terlihat di browser (jangan masukkan secret)
+- `MIDTRANS_SERVER_KEY` harus tetap di backend saja; jangan expose ke frontend
+- `VITE_MIDTRANS_CLIENT_KEY` adalah public key dan aman untuk frontend
+
+## Routing & API Proxy
+
+Request `/api` diproksikan ke backend Laravel di `http://localhost:8000` via `frontend/vite.config.ts`:
+
+```typescript
+proxy: {
+  '/api': {
+    target: 'http://localhost:8000',
+    changeOrigin: true,
+  }
+}
+```
+
+Ini memungkinkan frontend dan backend berjalan di port berbeda saat development.
+
 ## Scripts
 
 ```bash
 npm run dev      # Vite dev server (port 3000, proxy /api -> http://localhost:8000)
 npm run build    # tsc && vite build
-npm run lint     # ESLint (saat ini rusak - belum ada file konfigurasi; lihat docs/AUDIT.md)
+npm run lint     # ESLint
 ```
 
 ## Catatan
 
-- Request `/api` diproksikan ke backend Laravel di `http://localhost:8000` via `frontend/vite.config.ts`.
-- Backend menggunakan Laravel Sanctum; frontend baru memakai API pada alur login/signup.
+- Authentication menggunakan Sanctum bearer tokens (disimpan di in-memory + sessionStorage).
+- Commission & Escrow fully wired ke backend (`CommissionPage`, `OrderPage`, `MidtransPaymentModal`).
+- Fase 4–6 (Social, Discovery, Ranking) masih menggunakan mock data dari `mockData.ts`.
+- Backend endpoint `/api/commissions/{artist}/orders`, `/api/orders/{order}/pay`, `/api/webhooks/payment-gateway`, dan `/api/admin/escrow-ledger` sudah tersedia untuk production integration.

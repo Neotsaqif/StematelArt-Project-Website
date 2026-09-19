@@ -19,8 +19,8 @@ services:
       dockerfile: Dockerfile
     environment:
       APP_ENV: local
-      APP_DEBUG: "true"
-      APP_KEY: ${APP_KEY:-base64:3v4yVQ0zL2ZxQmJ6TnJ5Rk9Pc1VwWmFhR0hGd0hYd1E=}
+      APP_DEBUG: "${APP_DEBUG:-true}"
+      APP_KEY: "${APP_KEY}"
       DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: 5432
