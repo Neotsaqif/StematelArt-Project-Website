@@ -6,7 +6,7 @@ Owner: Kiandra (Dev 1)
 Backend: Laravel 12 REST API + Sanctum
 Database: PostgreSQL / Supabase
 Payment Gateway: Midtrans
-Current Status: Phase 10 complete with limitation; security hardening and comprehensive test suite verified, sandbox/production provider verification remains pending
+Current Status: Phase 12 technical implementation complete; external verification (production account, HTTPS, webhook registration, banking, payout capability) remains pending
 
 0. Cara Menggunakan Dokumen Ini
 
@@ -60,12 +60,12 @@ COMMISSION & ESCROW — KIANDRA
 [x] Phase 9 — Failure, Expiry & Recovery Handling
 [x] Phase 10 — Security Hardening & Payment Test Suite
 [x] Phase 11 — Frontend Integration / Demo Flow
-[ ] Phase 12 — Sandbox → Production Readiness (status placeholder)
+[x] Phase 12 — Sandbox → Production Readiness (technical implementation complete)
 [ ] Phase 13 — Documentation, Final Audit & Handoff
 
-PROGRESS: 12 / 14 phases completed
+PROGRESS: 13 / 14 phases completed
 
-Current Status: Phase 11 frontend integration and sandbox demo flow complete with documented limitations. Phase 12 Sandbox → Production Readiness is next.
+Current Status: Phase 12 technical hardening complete (frontend environment-driven, no hardcoded credentials, fail-closed production config, 303 backend tests passing, frontend build passing, secret scan clean). External verification (Midtrans production account, HTTPS domain, webhook registration, banking/payout capability) remains MANUAL/BLOCKER.
 
 Catatan: Phase 0 dicentang karena repository, PRD, struktur backend, dan arah payment/escrow sudah direview sebagai dasar pekerjaan. Belum ada implementasi Commission yang dianggap selesai.
 
@@ -1422,71 +1422,105 @@ frontend render actual server state
 
 Phase 12 — Sandbox → Production Readiness
 
-Status: [ ] NOT STARTED
+Status: [x] COMPLETE (TECHNICAL IMPLEMENTATION) / MANUAL VERIFICATION REQUIRED
 
 Tujuan:
 
 Membuat integrasi mudah dipindahkan dari akun developer/sandbox ke akun resmi StematelArt.
 
-Checklist:
+Phase 12 Implementation Notes
 
-Tidak ada sandbox credential hardcoded.
+Technical Implementation (COMPLETE):
 
-Environment flag tersedia.
+- Frontend `.env.example` created with `VITE_MIDTRANS_ENV`, `VITE_MIDTRANS_SNAP_URL`, `VITE_MIDTRANS_CLIENT_KEY`, and `VITE_API_BASE_URL`.
+- `MidtransPaymentModal.tsx` refactored to use `import.meta.env` for all Midtrans configuration; hardcoded Sandbox URL `https://app.sandbox.midtrans.com/snap/snap.js` removed.
+- Hardcoded placeholder Client Key `SB-Mid-client-REPLACE-ME` removed.
+- Fail-closed production behavior: if `VITE_MIDTRANS_SNAP_URL` or `VITE_MIDTRANS_CLIENT_KEY` is missing, modal displays configuration error instead of silent fallback to Sandbox.
+- TypeScript type declarations added via `frontend/src/vite-env.d.ts` with `/// <reference types="vite/client" />` and custom `ImportMetaEnv` interface.
+- Dynamic Snap script loading with `tag.onerror` handler; duplicate script load prevention; callbacks (`onSuccess`, `onPending`, `onError`, `onClose`) preserved.
+- Payment status remains backend-authoritative; frontend callbacks only trigger `window.location.reload()` to fetch updated order state from backend.
+- Backend Midtrans configuration already environment-driven via `config/services.php` (`MIDTRANS_ENV`, `MIDTRANS_IS_PRODUCTION`, `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`).
+- `MIDTRANS_SERVER_KEY` never exposed to frontend; frontend only uses public `VITE_MIDTRANS_CLIENT_KEY`.
+- Backend test suite: 303 tests passed (865 assertions); no regression.
+- Frontend build: `npm run build` successful; `npx tsc --noEmit` clean.
+- Security scan: no `SB-Mid-server`, `Mid-server`, `MIDTRANS_SERVER_KEY`, `sandbox.midtrans.com`, or `SB-Mid-client` hardcoded in `frontend/src`.
+- `git diff --check` clean (LF/CRLF normalization warning only).
 
-Sandbox endpoint configurable.
+TECHNICAL IMPLEMENTATION:
 
-Production endpoint configurable.
+[x] Frontend Midtrans environment-driven.
+[x] No hardcoded Sandbox URL in frontend source.
+[x] No hardcoded Client Key placeholder.
+[x] Frontend Server Key isolation.
+[x] Production fail-closed configuration.
+[x] TypeScript/build verified.
+[x] Backend tests verified (303 tests, 865 assertions).
+[x] Secret scan verified.
 
-Production credential berasal dari secret manager/environment.
+EXTERNAL VERIFICATION — MANUAL VERIFICATION REQUIRED / BLOCKER:
 
-Production webhook URL sudah dipisahkan dari local URL.
+[ ] Midtrans Production account verified.
+[ ] Production merchant/KYC verification.
+[ ] Production Server Key and Client Key obtained.
+[ ] Production payment methods activated.
+[ ] HTTPS production domain active.
+[ ] Production webhook registered.
+[ ] Banking requirements verified.
+[ ] Payout/withdrawal capability verified.
 
-HTTPS production aktif.
+OPERATIONS — MANUAL VERIFICATION REQUIRED / BLOCKER:
 
-Notification URL sudah dikonfigurasi pada Midtrans account.
+[ ] Production database provisioned.
+[ ] Production storage configured.
+[ ] Production scheduler active (`commission:expire-pending-payments`).
+[ ] Production logging/backup verified.
+[ ] Live preflight transaction completed.
 
-Production account StematelArt sudah diverifikasi.
-
-Payment methods yang digunakan sudah tersedia pada production account.
-
-Payout/withdrawal capability sudah diverifikasi.
-
-Banking/business requirements sudah diverifikasi.
+Production Go-Live: BLOCKED until all external verification and operational requirements above are completed.
 
 Config Matrix
 
-Environment
+| Environment | Account | MIDTRANS_ENV | Credential | Frontend Client Key |
+|---|---|---|---|---|
+| Local Demo | Developer Sandbox | `sandbox` | Developer Sandbox Server/Client Key | `VITE_MIDTRANS_CLIENT_KEY` (sandbox) |
+| Staging | Sandbox/Staging | `sandbox` | Staging Sandbox Server/Client Key | `VITE_MIDTRANS_CLIENT_KEY` (sandbox) |
+| Production | StematelArt Official | `production` | StematelArt Production Server/Client Key | `VITE_MIDTRANS_CLIENT_KEY` (production) |
 
-Account
+Frontend Environment Example (`.env.local`):
 
-MIDTRANS_ENV
+```ini
+VITE_MIDTRANS_ENV=sandbox
+VITE_MIDTRANS_SNAP_URL=https://app.sandbox.midtrans.com/snap/snap.js
+VITE_MIDTRANS_CLIENT_KEY=<your-sandbox-client-key>
+VITE_API_BASE_URL=http://localhost:8000/api
+```
 
-Credential
+Production Frontend Environment:
 
-Local Demo
+```ini
+VITE_MIDTRANS_ENV=production
+VITE_MIDTRANS_SNAP_URL=https://app.midtrans.com/snap/snap.js
+VITE_MIDTRANS_CLIENT_KEY=<stematelart-production-client-key>
+VITE_API_BASE_URL=https://api.stematelart.com/api
+```
 
-Developer Sandbox
+Backend Environment (Backend/.env):
 
-sandbox
+```ini
+MIDTRANS_ENV=production
+MIDTRANS_IS_PRODUCTION=true
+MIDTRANS_SERVER_KEY=<stematelart-production-server-key>
+MIDTRANS_CLIENT_KEY=<stematelart-production-client-key>
+```
 
-Developer Sandbox Key
+IMPORTANT:
 
-Staging
+- Server Key NEVER goes into `VITE_*`.
+- Client Key is public and can be exposed to frontend bundle.
+- Production credential NEVER committed to Git.
+- `.env.example` contains placeholder only.
 
-Sandbox/Staging
-
-sandbox
-
-Staging/Sandbox Key
-
-Production
-
-StematelArt Official
-
-production
-
-StematelArt Production Key
+Next Action: Manual Verification & Production Account Setup
 
 Phase 13 — Documentation, Final Audit & Handoff
 
