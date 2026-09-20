@@ -4,6 +4,8 @@ import type {
   CreateCommissionOrderPayload,
   PaymentResponse,
   ApiEnvelope,
+  Post,
+  CreatePostPayload,
 } from '../types';
 
 export interface RegisterPayload {
@@ -99,7 +101,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, authenti
   const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
   const data = await readResponse(res);
 
-  if (authenticated && res.status === 401) clearToken();
+  if (authenticated && res.status === 401) {
+    clearToken();
+    clearAuthUser();
+  }
   if (!res.ok) throw new ApiError(res.status, data);
   return data as T;
 }
@@ -274,6 +279,47 @@ export async function loginUser(payload: LoginPayload): Promise<AuthResponse> {
   }
 }
 
+export const postsApi = {
+  async list(perPage = 15): Promise<ApiEnvelope<{ posts: { data: Post[] } }>> {
+    return authFetch<{ posts: { data: Post[] } }>(`/posts?per_page=${perPage}`);
+  },
+
+  async get(id: number | string): Promise<ApiEnvelope<{ post: Post }>> {
+    return authFetch<{ post: Post }>(`/posts/${id}`);
+  },
+
+  async create(payload: CreatePostPayload): Promise<ApiEnvelope<{ post: Post }>> {
+    const formData = new FormData();
+    formData.append('title', payload.title);
+    if (payload.description) formData.append('description', payload.description);
+    if (payload.tags) formData.append('tags', payload.tags);
+    formData.append('artwork', payload.artwork);
+
+    return authFetch<{ post: Post }>('/posts', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async update(id: number | string, payload: Partial<Omit<CreatePostPayload, 'artwork'>> & { artwork?: File }): Promise<ApiEnvelope<{ post: Post }>> {
+    const formData = new FormData();
+    if (payload.title !== undefined) formData.append('title', payload.title);
+    if (payload.description !== undefined) formData.append('description', payload.description);
+    if (payload.tags !== undefined) formData.append('tags', payload.tags);
+    if (payload.artwork) formData.append('artwork', payload.artwork);
+    formData.append('_method', 'PUT');
+
+    return authFetch<{ post: Post }>(`/posts/${id}`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async delete(id: number | string): Promise<ApiEnvelope<Record<string, never>>> {
+    return authFetch<Record<string, never>>(`/posts/${id}`, { method: 'DELETE' });
+  },
+};
+
 export const commissionApi = {
   async getPackages(perPage = 50): Promise<ApiEnvelope<{ packages: { data: CommissionPackage[] } | CommissionPackage[] }>> {
     return authFetch<{ packages: { data: CommissionPackage[] } | CommissionPackage[] }>(`/commission/packages?per_page=${perPage}`);
@@ -351,5 +397,26 @@ export async function logoutUser(): Promise<void> {
   } catch {
   } finally {
     clearToken();
+    clearAuthUser();
   }
+}
+
+export function mapPostToArtwork(post: Post): any {
+  const user = post.user;
+  return {
+    id: post.id,
+    photoId: post.artwork_url || '',
+    aspect: 1,
+    title: post.title,
+    artist: user ? user.name : 'Unknown',
+    artistId: user ? String(user.id) : '',
+    avatarBg: 'bg-gray-200',
+    initials: (user?.name?.[0] || '?').toUpperCase(),
+    likes: 0,
+    comments: 0,
+    views: 0,
+    category: 'Digital Art',
+    tags: post.tags ? post.tags.split(',').map((t: string) => t.trim()) : [],
+    description: post.description || '',
+  };
 }

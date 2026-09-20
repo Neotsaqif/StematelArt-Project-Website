@@ -104,7 +104,7 @@ export function TopCluster() {
             data-goes-to="Menu akun"
             className="flex-shrink-0"
           >
-            <Av bg="#E81E28" initials="AU" size={32} />
+            <Av bg="#E81E28" initials={app.currentUser?.name.slice(0, 2).toUpperCase() || "?"} size={32} />
           </button>
         </>
       ) : (

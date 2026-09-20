@@ -1,3 +1,30 @@
+export interface Post {
+  id: number;
+  user_id: number;
+  title: string;
+  description: string | null;
+  tags: string | null;
+  artwork_path: string | null;
+  artwork_url: string | null;
+  created_at: string;
+  updated_at: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    bio: string | null;
+    avatar: string | null;
+  };
+}
+
+export interface CreatePostPayload {
+  title: string;
+  description?: string;
+  tags?: string;
+  artwork: File;
+}
+
 export interface Artwork {
   id: number;
   photoId: string;

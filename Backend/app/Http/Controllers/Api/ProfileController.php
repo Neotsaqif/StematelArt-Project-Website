@@ -3,12 +3,38 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ProfileController extends Controller
 {
+    public function showPublic(User $user)
+    {
+        $postsCount = $user->posts()->count();
+        $followersCount = $user->followers()->count();
+        $followingCount = $user->following()->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'bio' => $user->bio,
+                    'avatar' => $user->avatar,
+                    'followers_count' => $followersCount,
+                    'following_count' => $followingCount,
+                    'posts_count' => $postsCount,
+                    'created_at' => $user->created_at,
+                ],
+            ],
+        ]);
+    }
+
     public function show(Request $request)
     {
         return response()->json([

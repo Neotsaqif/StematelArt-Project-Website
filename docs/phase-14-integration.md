@@ -29,9 +29,9 @@ Plus ongoing: bug fixing, security testing, regression testing, and documentatio
 | Phase | Status | Implementation Summary | Tests | Known Issues | Commit |
 |-------|--------|----------------------|-------|--------------|--------|
 | 14.1 Auth & Identity | **PASS** | Removed hardcoded identity fallbacks. GET /api/user is authoritative source. 401 responses clear token+auth_user. Logout clears both. No auth_user used as authority. | Backend: 44/44 pass, Frontend: build/typecheck pass | None identified | Pending commit |
-| 14.2 Dynamic Profiles & Follow | **NOT STARTED** | - | - | - | - |
-| 14.3 Social Backend & Frontend Integration | **NOT STARTED** | - | - | - | - |
-| 14.4 Real Artwork Upload & Storage | **NOT STARTED** | - | - | - | - |
+| 14.2 Dynamic Profiles & Follow | **PASS** | Added GET /api/users/{user}/profile public endpoint with follower/following/post counts; verified ownership, follow/unfollow lifecycle, boundaries, sanitized response. | Backend: Profile (13/13 pass), Follow (14/14 pass), Full suite: 303/303 pass | None identified | Pending commit |
+| 14.3 Artwork/Post Domain | **PASS** | Complete: Post model, PostController with server-side ownership, PostPolicy (artist/admin create, owner/admin mutate), tampering protection, sensitive field hiding, cascade delete. Integrated with postsApi frontend. | Backend: Post (14/14 pass), Full suite: 303/303 pass, Frontend build pass | None identified | Pending commit |
+| 14.4 Real Artwork Upload & Storage | **PASS** | Complete: Real file picker with PNG/JPG/WebP validation (max 10MB), FormData upload, ArtworkStorageService (UUID storage, cleanup on failure), ArtworkWatermarkService (watermarking), redirect with returned Post ID. | Backend: Upload (17/17 pass), Full suite: 303/303 pass, Frontend build pass | None identified | Pending commit |
 | 14.5 Discovery, Search & Feed | **NOT STARTED** | - | - | - | - |
 | 14.6 Ranking | **NOT STARTED** | - | - | - | - |
 | 14.7 Commission Fixes | **NOT STARTED** | - | - | - | - |
@@ -110,6 +110,7 @@ Plus ongoing: bug fixing, security testing, regression testing, and documentatio
 | Date | Agent | Task | Files Changed | Tests | Result | Commit | Notes |
 |------|--------|------|---------------|-------|--------|--------|-------|
 | 2026-09-20 | opencode | Phase 14.1 Auth & Identity implementation | 5 files (Sidebar.tsx, TopNav.tsx, AvatarMenu.tsx, ArtworkDetailPage.tsx, api.ts) | Backend: 44/44, Frontend: build pass | SUCCESS | Pending | Removed hardcoded identity fallbacks, strengthened auth flow |
+| 2026-09-20 | opencode | Phase 14.2 Dynamic Profiles & Follow verification & route addition | 2 files (ProfileController.php, api.php) | Backend: Profile 13/13, Follow 14/14, Full suite 303/303, Frontend build pass | SUCCESS | Pending | Added GET /api/users/{user}/profile endpoint, verified security boundaries and test suite |
 | 2026-09-20 | opencode | Branch setup and documentation | docs/phase-14-integration.md | N/A | SUCCESS | Pending | Created phase tracking documentation |
 
 ## Known Issues
