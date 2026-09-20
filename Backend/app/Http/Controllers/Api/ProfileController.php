@@ -37,10 +37,16 @@ class ProfileController extends Controller
 
     public function show(Request $request)
     {
+        $user = $request->user();
+        $likedPostIds = $user->likedPosts()->pluck('posts.id')->toArray();
+        $savedPostIds = $user->savedPosts()->pluck('posts.id')->toArray();
+
         return response()->json([
             'success' => true,
             'data' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'liked_post_ids' => $likedPostIds,
+                'saved_post_ids' => $savedPostIds,
             ],
         ]);
     }

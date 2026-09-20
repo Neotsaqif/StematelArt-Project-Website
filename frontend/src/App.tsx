@@ -5,10 +5,10 @@ import { Routes, Route, useNavigate, useLocation, useParams, useSearchParams } f
 import { AppCtx } from './context/AppContext';
 
 // Data & Helpers
-import { COLLECTION_SEED, ARTWORKS, ORDERS, AUTH_SCREENS, EXPORT_FRAMES } from './data/mockData';
+import { ARTWORKS, ORDERS, AUTH_SCREENS, EXPORT_FRAMES } from './data/mockData';
 import { toast } from './utils/helpers';
-import { Artwork, Order, Collection, Notification, Comment, Profile, ConfirmSpec, AppOverlay, AppContextType, MidtransPaymentData, CommissionOrder } from './types';
-import { AuthUser, clearToken, fetchMe, getToken, logoutUser } from './services/api';
+import { Artwork, Order, ConfirmSpec, AppOverlay, AppContextType, MidtransPaymentData } from './types';
+import { AuthUser, clearToken, fetchMe, getToken, logoutUser, postsApi } from './services/api';
 
 // UI & Layout Components
 import { Toaster } from './components/ui/Toast';
@@ -184,7 +184,8 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
   const [liked, setLiked] = useState<Set<number>>(new Set());
   const [saved, setSaved] = useState<Set<number>>(new Set());
   const [followed, setFollowed] = useState<Set<string>>(new Set());
-  const [collections, setCollections] = useState<Collection[]>(COLLECTION_SEED);
+  const [liked, setLiked] = useState<Set<number>>(new Set());
+  const [saved, setSaved] = useState<Set<number>>(new Set());
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [loggedIn, setLoggedIn] = useState(isStatic ? Boolean(props.auth0) : false);
   const [viewState, setViewState] = useState("normal");
@@ -373,13 +374,31 @@ export function App(props: { screen0?: string; params0?: any; auth0?: boolean; e
     openSearch: (q) => push("search", { q }),
     openCategory: (c) => push("category", { category: c }),
     openCollection: (c) => push("collection", { collection: c }),
-    toggleLike: (a) => {
+    toggleLike: async (a) => {
+      const isLiked = liked.has(a.id);
+      // Optimistic update
       setLiked(s => {
         const n = new Set(s);
-        n.has(a.id) ? n.delete(a.id) : n.add(a.id);
-        toast.success(n.has(a.id) ? "Ditambahkan ke Favorit" : "Dihapus dari Favorit", { description: a.title });
+        isLiked ? n.delete(a.id) : n.add(a.id);
         return n;
       });
+      try {
+        if (isLiked) {
+          await postsApi.unlike(a.id);
+          toast("Dihapus dari Favorit", { description: a.title });
+        } else {
+          await postsApi.like(a.id);
+          toast.success("Ditambahkan ke Favorit", { description: a.title });
+        }
+      } catch {
+        // Rollback on failure
+        setLiked(s => {
+          const n = new Set(s);
+          isLiked ? n.add(a.id) : n.delete(a.id);
+          return n;
+        });
+        toast.error("Gagal memperbarui status suka");
+      }
     },
     toggleFollow: (id) => {
       setFollowed(s => {
