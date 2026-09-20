@@ -195,7 +195,7 @@ export function ArtworkDetailPage({ artwork }) {
         <h3 className="text-base font-bold text-[#0A0A0B] mb-5">Komentar ({artwork.comments})</h3>
         {/* Composer */}
         <div className="flex gap-3 mb-6">
-          <Av bg="#E81E28" initials="AU" size={36} />
+          <Av bg="#E81E28" initials={app.currentUser?.name.slice(0, 2).toUpperCase() || "?"} size={36} />
           <div className="flex-1">
             {reply && (
               <p className="text-xs text-[#52525B] mb-1.5 flex items-center gap-1.5">

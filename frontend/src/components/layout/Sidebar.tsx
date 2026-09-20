@@ -103,10 +103,10 @@ export function Sidebar() {
             data-goes-to="Menu akun"
             className="flex items-center gap-2.5 w-full hover:bg-gray-50 active:bg-[#F5F5F5] rounded-xl px-2 py-2 transition-colors"
           >
-            <Av bg="#E81E28" initials="AU" size={32} />
+             <Av bg="#E81E28" initials={app.currentUser?.name.slice(0, 2).toUpperCase() || "?"} size={32} />
             <div className="text-left min-w-0">
-              <p className="text-sm font-semibold text-[#0A0A0B] truncate leading-tight">Artvault User</p>
-              <p className="text-xs text-[#A1A1AA]">@artvault_user</p>
+              <p className="text-sm font-semibold text-[#0A0A0B] truncate leading-tight">{app.currentUser?.name || "Tamu"}</p>
+              <p className="text-xs text-[#A1A1AA]">{app.currentUser?.email || "Belum masuk"}</p>
             </div>
           </button>
         ) : (

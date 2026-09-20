@@ -99,7 +99,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, authenti
   const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
   const data = await readResponse(res);
 
-  if (authenticated && res.status === 401) clearToken();
+  if (authenticated && res.status === 401) {
+    clearToken();
+    clearAuthUser();
+  }
   if (!res.ok) throw new ApiError(res.status, data);
   return data as T;
 }
@@ -351,5 +354,6 @@ export async function logoutUser(): Promise<void> {
   } catch {
   } finally {
     clearToken();
+    clearAuthUser();
   }
 }
