@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\LikeController;
+use App\Http\Controllers\Api\SaveController;
+use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\CommissionPackageController;
 use App\Http\Controllers\Api\CommissionOrderController;
 use App\Http\Controllers\Api\AdminCommissionOrderController;
@@ -76,6 +79,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/posts', [PostController::class, 'store']);
     Route::put('/posts/{post}', [PostController::class, 'update']);
     Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+    Route::post('/posts/{post}/like', [LikeController::class, 'store']);
+    Route::delete('/posts/{post}/like', [LikeController::class, 'destroy']);
+    Route::post('/posts/{post}/save', [SaveController::class, 'store']);
+    Route::delete('/posts/{post}/save', [SaveController::class, 'destroy']);
+    Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
 
     // Commission Packages — read (any authenticated user)
     Route::get('/commission/packages', [CommissionPackageController::class, 'index']);
