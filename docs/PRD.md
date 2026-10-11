@@ -263,6 +263,7 @@ Each feature below carries a **status tag**:
 | Tiered pricing packages (`commission_packages`) | Proto / Planned |
 | "Ambil Slot" request flow (brief, reference image, deadline) | Proto / Planned |
 | Order detail + status timeline | Proto |
+| Profile-page commission status (current order + refunding status) | Proto / Planned |
 | Payment via gateway → escrow hold | Planned |
 | Order lifecycle (`pending_payment → paid → in_progress → delivered → completed → released`) | Planned |
 | Expired / cancelled order handling | Planned |
@@ -271,6 +272,7 @@ Each feature below carries a **status tag**:
 | Dispute / refund | Out of MVP (future release) |
 
 **Requirements:**
+- The **Profile page** (the artist showcase page) must surface a **commission status** section showing the current/latest in-progress commission(s) for the artist and the refunding status of any order. This view belongs on the artist Profile page only — it is **not** shown on the "Profil Saya", "Watermark Generator", or "Pengaturan" screens. Refund status is a read-only display of the order's refund state (the money-movement refund flow itself remains out of MVP scope).
 - Every order executes through the escrow model: the User pays via a real payment gateway into the **platform's own gateway account** (Admin is escrow custodian — no separate internal wallet); the Artist is paid out **only when the User clicks "Order Completed"**.
 - Supported lifecycle: `pending_payment → paid (escrow held) → in_progress → delivered → completed → released`, plus `expired` / `cancelled`. `disputed` / `refunded` are reserved for a future release (the schema must allow adding them later); the dispute/refund/cancel money-movement flows are **not** built in this phase.
 - The User may create an order against an artist package ("Ambil Slot") with a brief, reference image, and optional deadline; payment is required before work begins.
