@@ -18,6 +18,36 @@ export interface Post {
   };
 }
 
+export interface ApiComment {
+  id: number;
+  user_id: number;
+  post_id: number;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    avatar: string | null;
+  };
+}
+
+export interface Like {
+  id: number;
+  user_id: number;
+  post_id: number;
+  created_at: string;
+}
+
+export interface Save {
+  id: number;
+  user_id: number;
+  post_id: number;
+  created_at: string;
+}
+
 export interface CreatePostPayload {
   title: string;
   description?: string;
@@ -213,7 +243,7 @@ export interface Participant {
   works: number;
 }
 
-export interface Comment {
+export interface LegacyComment {
   user: string;
   bg: string;
   init: string;

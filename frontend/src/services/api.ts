@@ -25,6 +25,8 @@ export interface AuthUser {
   name: string;
   email: string;
   role: string;
+  liked_post_ids?: number[];
+  saved_post_ids?: number[];
 }
 
 export interface AuthResponse {
@@ -318,6 +320,37 @@ export const postsApi = {
   async delete(id: number | string): Promise<ApiEnvelope<Record<string, never>>> {
     return authFetch<Record<string, never>>(`/posts/${id}`, { method: 'DELETE' });
   },
+
+  async like(postId: number | string): Promise<ApiEnvelope<{ liked: boolean }>> {
+    return authFetch<{ liked: boolean }>(`/posts/${postId}/like`, { method: 'POST' });
+  },
+
+  async unlike(postId: number | string): Promise<ApiEnvelope<{ liked: boolean }>> {
+    return authFetch<{ liked: boolean }>(`/posts/${postId}/like`, { method: 'DELETE' });
+  },
+
+  async save(postId: number | string): Promise<ApiEnvelope<{ saved: boolean }>> {
+    return authFetch<{ saved: boolean }>(`/posts/${postId}/save`, { method: 'POST' });
+  },
+
+  async unsave(postId: number | string): Promise<ApiEnvelope<{ saved: boolean }>> {
+    return authFetch<{ saved: boolean }>(`/posts/${postId}/save`, { method: 'DELETE' });
+  },
+
+  async getComments(postId: number | string): Promise<ApiEnvelope<{ comments: any[] }>> {
+    return authFetch<{ comments: any[] }>(`/posts/${postId}/comments`);
+  },
+
+  async createComment(postId: number | string, body: string): Promise<ApiEnvelope<{ comment: any }>> {
+    return authFetch<{ comment: any }>(`/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    });
+  },
+
+  async deleteComment(commentId: number | string): Promise<ApiEnvelope<Record<string, never>>> {
+    return authFetch<Record<string, never>>(`/comments/${commentId}`, { method: 'DELETE' });
+  },
 };
 
 export const commissionApi = {
@@ -381,11 +414,19 @@ export async function fetchMe(): Promise<AuthUser | null> {
   try {
     const data = await apiFetch<{
       success?: boolean;
-      data?: { user?: AuthUser };
+      data?: {
+        user?: AuthUser;
+        liked_post_ids?: number[];
+        saved_post_ids?: number[];
+      };
     }>('/user');
 
-    if (data.success === false) return null;
-    return data.data?.user ?? null;
+    if (data.success === false || !data.data?.user) return null;
+    return {
+      ...data.data.user,
+      liked_post_ids: data.data.liked_post_ids ?? [],
+      saved_post_ids: data.data.saved_post_ids ?? [],
+    };
   } catch {
     return null;
   }

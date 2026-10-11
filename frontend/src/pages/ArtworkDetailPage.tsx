@@ -1,10 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { ARTWORKS, MOCK_COMMENTS } from '../data/mockData';
+import { ARTWORKS } from '../data/mockData';
 import { fmtNum, toast } from '../utils/helpers';
 import { Pic } from '../components/ui/Pic';
 import { Av } from '../components/ui/Avatar';
 import { ArrowLeft, Heart, Share2, MessageCircle, Bookmark, MoreHorizontal, Eye, Check, Send, AlertTriangle, Reply, X } from '../components/ui/Icons';
+import { postsApi } from '../services/api';
+import type { ApiComment } from '../types';
 
 export function ArtworkDetailPage({ artwork }) {
   const app = useApp();
@@ -12,18 +14,57 @@ export function ArtworkDetailPage({ artwork }) {
   const saved = app.saved.has(artwork.id);
   const following = app.followed.has(artwork.artistId);
   const [comment, setComment] = useState("");
+  const [commentsList, setCommentsList] = useState<any[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [cLikes, setCLikes] = useState({});
-  const [reply, setReply] = useState(null);
-  const composer = useRef(null);
+  const [reply, setReply] = useState<string | null>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
 
   const related = ARTWORKS.filter(a => a.id !== artwork.id).slice(0, 9);
 
-  const send = () => {
-    if (!comment.trim()) return;
-    if (app.viewState === "error") { setFailed(true); return; }
-    setFailed(false); setComment(""); setReply(null);
-    toast.success("Komentar terkirim", { description: "Komentarmu tampil di bawah karya ini" });
+  useEffect(() => {
+    if (!artwork.id) return;
+    setLoadingComments(true);
+    postsApi.getComments(artwork.id)
+      .then(res => {
+        if (res.success && res.data?.comments) {
+          setCommentsList(res.data.comments);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingComments(false));
+  }, [artwork.id]);
+
+  const send = async () => {
+    if (!comment.trim() || !artwork.id) return;
+    try {
+      const res = await postsApi.createComment(artwork.id, comment.trim());
+      if (res.success && res.data?.comment) {
+        setCommentsList(prev => [res.data.comment, ...prev]);
+        setFailed(false);
+        setComment("");
+        setReply(null);
+        toast.success("Komentar terkirim", { description: "Komentarmu tampil di bawah karya ini" });
+      } else {
+        setFailed(true);
+      }
+    } catch {
+      setFailed(true);
+    }
+  };
+
+  const deleteComm = async (commentId: number) => {
+    try {
+      const res = await postsApi.deleteComment(commentId);
+      if (res.success) {
+        setCommentsList(prev => prev.filter(c => c.id !== commentId));
+        toast("Komentar dihapus");
+      } else {
+        toast.error(res.message || "Gagal menghapus komentar");
+      }
+    } catch {
+      toast.error("Gagal menghapus komentar");
+    }
   };
 
   const focusComposer = () => {
@@ -233,36 +274,46 @@ export function ArtworkDetailPage({ artwork }) {
             )}
           </div>
         </div>
-        {/* Mock comments */}
-        {MOCK_COMMENTS.map(c => {
-          const bump = cLikes[c.user] || 0;
-          return (
-            <div key={c.user} className="flex gap-3 py-4 border-b border-[#E5E5E7] last:border-0">
-              <button onClick={() => app.openProfile(c.user)} data-goes-to="→ Profil artist"><Av bg={c.bg} initials={c.init} size={36} /></button>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <button onClick={() => app.openProfile(c.user)} data-goes-to="→ Profil artist" className="text-sm font-semibold text-[#0A0A0B] hover:text-[#C41A22] transition-colors">{c.user}</button>
-                  <span className="text-xs text-[#A1A1AA]">{c.ago}</span>
-                </div>
-                <p className="text-sm text-[#52525B] leading-relaxed">{c.text}</p>
-                <div className="flex items-center gap-4 mt-2">
-                  <button
-                    onClick={() => app.requireAuth(() => setCLikes(s => ({ ...s, [c.user]: (s[c.user] || 0) + 1 })))}
-                    data-goes-to="Tambah suka komentar"
-                    className={"text-xs flex items-center gap-1 transition-colors " + (bump ? "text-[#C41A22] font-bold" : "text-[#A1A1AA] hover:text-[#C41A22]")}
-                  >
-                    <Heart size={10} fill={bump ? "currentColor" : "none"} /> {c.likes + bump}
-                  </button>
-                  <button
-                    onClick={() => app.requireAuth(() => startReply(c.user))}
-                    data-goes-to="Composer balasan @username"
-                    className="text-xs text-[#A1A1AA] hover:text-[#0A0A0B] transition-colors"
-                  >Balas</button>
+        {/* Comments Section */}
+        {loadingComments ? (
+          <p className="text-xs text-[#A1A1AA] py-4">Memuat komentar...</p>
+        ) : commentsList.length === 0 ? (
+          <p className="text-xs text-[#A1A1AA] py-4">Belum ada komentar. Jadi yang pertama berkomentar!</p>
+        ) : (
+          commentsList.map(c => {
+            const isOwner = app.currentUser?.id === c.user_id;
+            const isAdmin = app.currentUser?.role === 'admin';
+            const canDelete = isOwner || isAdmin;
+            const authorName = c.user?.name || 'Anonim';
+            const initials = (authorName[0] || '?').toUpperCase();
+
+            return (
+              <div key={c.id} className="flex gap-3 py-4 border-b border-[#E5E5E7] last:border-0">
+                <Av bg="bg-gray-200" initials={initials} size={36} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[#0A0A0B]">{authorName}</span>
+                      <span className="text-xs text-[#A1A1AA]">
+                        {c.created_at ? new Date(c.created_at).toLocaleDateString() : ''}
+                      </span>
+                    </div>
+                    {canDelete && (
+                      <button
+                        onClick={() => deleteComm(c.id)}
+                        title="Hapus komentar"
+                        className="text-[#A1A1AA] hover:text-[#C41A22] transition-colors p-1"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-sm text-[#52525B] leading-relaxed">{c.body}</p>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );

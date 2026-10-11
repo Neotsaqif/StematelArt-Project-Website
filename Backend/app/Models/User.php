@@ -102,4 +102,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(CommissionOrder::class, 'artist_id');
     }
+
+    public function likedPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'likes')->withTimestamps();
+    }
+
+    public function savedPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'saves')->withTimestamps();
+    }
 }
